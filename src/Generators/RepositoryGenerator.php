@@ -61,8 +61,8 @@ final class RepositoryGenerator implements GeneratorInterface
     public function getSupportedOptions(): array
     {
         return [
-            'with-caching' => 'Include caching layer',
-            'with-specifications' => 'Include specification pattern support',
+            'with_caching' => 'Include caching layer',
+            'with_specifications' => 'Include specification pattern support',
             'event-sourced' => 'Use event sourcing (default: true)',
         ];
     }
@@ -78,7 +78,7 @@ final class RepositoryGenerator implements GeneratorInterface
             'aggregate' => $aggregateName,
             'aggregate_lower' => Str::lower($aggregateName),
             'id_class' => "{$aggregateName}Id",
-            'with_specifications' => $options['with-specifications'] ?? false,
+            'with_specifications' => $options['with_specifications'] ?? false,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Domain/Repositories/{$className}.php";
@@ -100,8 +100,8 @@ final class RepositoryGenerator implements GeneratorInterface
             'id_class' => "{$aggregateName}Id",
             'interface' => "{$aggregateName}RepositoryInterface",
             'module' => $moduleName,
-            'with_caching' => $options['with-caching'] ?? true,
-            'with_specifications' => $options['with-specifications'] ?? false,
+            'with_caching' => $options['with_caching'] ?? true,
+            'with_specifications' => $options['with_specifications'] ?? false,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Infrastructure/Persistence/EventStore/{$className}.php";

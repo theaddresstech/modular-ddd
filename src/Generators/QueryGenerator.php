@@ -63,8 +63,8 @@ final class QueryGenerator implements GeneratorInterface
         return [
             'aggregate' => 'Target aggregate name',
             'action' => 'Query action (get, list, find)',
-            'with-caching' => 'Include caching strategy',
-            'with-pagination' => 'Include pagination support',
+            'with_caching' => 'Include caching strategy',
+            'with_pagination' => 'Include pagination support',
         ];
     }
 
@@ -83,8 +83,8 @@ final class QueryGenerator implements GeneratorInterface
             'aggregate_lower' => Str::lower($aggregateName),
             'action' => $action,
             'module' => $moduleName,
-            'with_caching' => $options['with-caching'] ?? true,
-            'with_pagination' => $options['with-pagination'] ?? ($action === 'list'),
+            'with_caching' => $options['with_caching'] ?? true,
+            'with_pagination' => $options['with_pagination'] ?? ($action === 'list'),
             'properties' => $this->getQueryProperties($action, $aggregateName),
             'cache_key' => $this->getCacheKey($action, $aggregateName),
             'cache_ttl' => $this->getCacheTtl($action),
@@ -114,8 +114,8 @@ final class QueryGenerator implements GeneratorInterface
             'action' => $action,
             'module' => $moduleName,
             'read_model' => "{$aggregateName}ReadModel",
-            'with_caching' => $options['with-caching'] ?? true,
-            'with_pagination' => $options['with-pagination'] ?? ($action === 'list'),
+            'with_caching' => $options['with_caching'] ?? true,
+            'with_pagination' => $options['with_pagination'] ?? ($action === 'list'),
             'handle_logic' => $this->getHandlerLogic($action, $aggregateName),
         ]);
 

@@ -64,7 +64,7 @@ final class CommandGenerator implements GeneratorInterface
             'aggregate' => 'Target aggregate name',
             'action' => 'Command action (create, update, delete)',
             'async' => 'Make command asynchronous',
-            'with-authorization' => 'Include authorization checks',
+            'with_authorization' => 'Include authorization checks',
         ];
     }
 
@@ -84,7 +84,7 @@ final class CommandGenerator implements GeneratorInterface
             'action' => $action,
             'module' => $moduleName,
             'async' => $options['async'] ?? false,
-            'with_authorization' => $options['with-authorization'] ?? true,
+            'with_authorization' => $options['with_authorization'] ?? true,
             'properties' => $this->getCommandProperties($action, $aggregateName),
         ]);
 

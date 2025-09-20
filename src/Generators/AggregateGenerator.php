@@ -62,9 +62,9 @@ final class AggregateGenerator implements GeneratorInterface
     public function getSupportedOptions(): array
     {
         return [
-            'with-validation' => 'Include business rule validation',
-            'with-specifications' => 'Generate specification classes',
-            'with-entities' => 'Generate related entities',
+            'with_validation' => 'Include business rule validation',
+            'with_specifications' => 'Generate specification classes',
+            'with_entities' => 'Generate related entities',
         ];
     }
 
@@ -80,7 +80,7 @@ final class AggregateGenerator implements GeneratorInterface
             'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
             'id_class' => "{$aggregateName}Id",
-            'with_validation' => $options['with-validation'] ?? true,
+            'with_validation' => $options['with_validation'] ?? true,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Domain/Models/{$className}.php";

@@ -69,8 +69,8 @@ final class ServiceGenerator implements GeneratorInterface
         return [
             'layer' => 'Service layer (domain or application)',
             'aggregate' => 'Related aggregate name',
-            'with-interface' => 'Generate service interface',
-            'with-events' => 'Include event dispatching',
+            'with_interface' => 'Generate service interface',
+            'with_events' => 'Include event dispatching',
         ];
     }
 
@@ -86,8 +86,8 @@ final class ServiceGenerator implements GeneratorInterface
             'service_lower' => Str::lower($serviceName),
             'aggregate' => $options['aggregate'] ?? $moduleName,
             'module' => $moduleName,
-            'with_interface' => $options['with-interface'] ?? false,
-            'with_events' => $options['with-events'] ?? false,
+            'with_interface' => $options['with_interface'] ?? false,
+            'with_events' => $options['with_events'] ?? false,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Domain/Services/{$className}.php";
@@ -108,8 +108,8 @@ final class ServiceGenerator implements GeneratorInterface
             'service_lower' => Str::lower($serviceName),
             'aggregate' => $options['aggregate'] ?? $moduleName,
             'module' => $moduleName,
-            'with_interface' => $options['with-interface'] ?? false,
-            'with_events' => $options['with-events'] ?? true,
+            'with_interface' => $options['with_interface'] ?? false,
+            'with_events' => $options['with_events'] ?? true,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Application/Services/{$className}.php";

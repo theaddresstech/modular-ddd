@@ -57,11 +57,14 @@ final class ModuleGenerator implements GeneratorInterface
     {
         return [
             'aggregate' => 'Name of the main aggregate (defaults to module name)',
-            'with-api' => 'Generate API endpoints',
-            'with-web' => 'Generate web routes and views',
-            'with-admin' => 'Generate admin interface',
-            'skip-tests' => 'Skip test generation',
+            'generate_api' => 'Generate API endpoints',
+            'generate_web' => 'Generate web routes and views',
+            'generate_tests' => 'Generate test files',
+            'generate_migration' => 'Generate migration files',
+            'generate_factory' => 'Generate factory files',
+            'generate_seeder' => 'Generate seeder files',
             'force' => 'Overwrite existing module',
+            'dry_run' => 'Show what would be generated without creating files',
         ];
     }
 
@@ -120,7 +123,7 @@ final class ModuleGenerator implements GeneratorInterface
         $files[] = $modulePath . "/Database/Seeders/{$moduleName}DatabaseSeeder.php";
 
         // Controller and related classes if API/Web is enabled
-        if ($options['generate_api'] ?? true || $options['generate_web'] ?? true) {
+        if (($options['generate_api'] ?? true) || ($options['generate_web'] ?? true)) {
             $files[] = $modulePath . "/Presentation/Http/Controllers/{$aggregateName}Controller.php";
             $files[] = $modulePath . "/Presentation/Http/Requests/Store{$aggregateName}Request.php";
             $files[] = $modulePath . "/Presentation/Http/Requests/Update{$aggregateName}Request.php";
@@ -204,7 +207,7 @@ final class ModuleGenerator implements GeneratorInterface
         $createdFiles[] = $this->generateServiceProvider($moduleName, $options);
 
         // Generate controller if requested
-        if ($options['with-api'] ?? false || $options['with-web'] ?? false) {
+        if (($options['generate_api'] ?? true) || ($options['generate_web'] ?? true)) {
             $createdFiles = array_merge(
                 $createdFiles,
                 $this->generateController($moduleName, $aggregateName, $options)
@@ -212,7 +215,7 @@ final class ModuleGenerator implements GeneratorInterface
         }
 
         // Generate tests if not skipped
-        if (!($options['skip-tests'] ?? false)) {
+        if ($options['generate_tests'] ?? true) {
             $createdFiles = array_merge(
                 $createdFiles,
                 $this->generateTests($moduleName, $aggregateName, $options)
@@ -340,11 +343,11 @@ final class ModuleGenerator implements GeneratorInterface
                 'auto_discovery' => true,
             ],
             'routes' => [
-                'api' => $options['with-api'] ?? false,
-                'web' => $options['with-web'] ?? false,
+                'api' => $options['generate_api'] ?? true,
+                'web' => $options['generate_web'] ?? true,
             ],
             'migrations' => true,
-            'tests' => !($options['skip-tests'] ?? false),
+            'tests' => $options['generate_tests'] ?? true,
         ];
 
         $manifestPath = $modulePath . '/manifest.json';
@@ -488,8 +491,8 @@ final class ModuleGenerator implements GeneratorInterface
             'module' => $moduleName,
             'module_lower' => Str::lower($moduleName),
             'aggregate' => $aggregateName,
-            'with_api' => $options['with-api'] ?? false,
-            'with_web' => $options['with-web'] ?? false,
+            'with_api' => $options['generate_api'] ?? true,
+            'with_web' => $options['generate_web'] ?? true,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Providers/{$className}.php";
@@ -510,8 +513,8 @@ final class ModuleGenerator implements GeneratorInterface
             'aggregate' => $aggregateName,
             'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
-            'with_api' => $options['with-api'] ?? false,
-            'with_web' => $options['with-web'] ?? false,
+            'with_api' => $options['generate_api'] ?? true,
+            'with_web' => $options['generate_web'] ?? true,
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Presentation/Http/Controllers/{$className}.php";
@@ -604,7 +607,7 @@ final class ModuleGenerator implements GeneratorInterface
         $aggregateName = $options['aggregate'] ?? $moduleName;
 
         // API routes
-        if ($options['with-api'] ?? false) {
+        if ($options['generate_api'] ?? true) {
             $apiRoutesContent = $this->stubProcessor->process('routes-api', [
                 'module' => $moduleName,
                 'module_lower' => Str::lower($moduleName),
@@ -618,7 +621,7 @@ final class ModuleGenerator implements GeneratorInterface
         }
 
         // Web routes
-        if ($options['with-web'] ?? false) {
+        if ($options['generate_web'] ?? true) {
             $webRoutesContent = $this->stubProcessor->process('routes-web', [
                 'module' => $moduleName,
                 'module_lower' => Str::lower($moduleName),
