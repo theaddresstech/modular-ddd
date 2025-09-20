@@ -79,7 +79,7 @@ final class StubProcessor
     {
         foreach ($variables as $key => $value) {
             $placeholder = '{{ ' . $key . ' }}';
-            $content = str_replace($placeholder, (string) $value, $content);
+            $content = str_replace($placeholder, $this->convertValueToString($value), $content);
         }
 
         // Process conditional blocks
@@ -89,6 +89,63 @@ final class StubProcessor
         $content = $this->processLoops($content, $variables);
 
         return $content;
+    }
+
+    /**
+     * Convert a value to string for template replacement
+     *
+     * @param mixed $value
+     * @return string
+     */
+    private function convertValueToString($value): string
+    {
+        if (is_string($value) || is_numeric($value)) {
+            return (string) $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_array($value)) {
+            // If it's an array of arrays (like command properties), convert to a formatted string
+            if (isset($value[0]) && is_array($value[0])) {
+                return $this->formatPropertiesArray($value);
+            }
+            // Simple array - join with commas
+            return implode(', ', array_map([$this, 'convertValueToString'], $value));
+        }
+
+        if (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return (string) $value;
+            }
+            return get_class($value);
+        }
+
+        if (is_null($value)) {
+            return '';
+        }
+
+        // Fallback to JSON for complex types
+        return json_encode($value) ?: '';
+    }
+
+    /**
+     * Format an array of property definitions for use in stubs
+     *
+     * @param array<array<string, string>> $properties
+     * @return string
+     */
+    private function formatPropertiesArray(array $properties): string
+    {
+        $formatted = [];
+        foreach ($properties as $property) {
+            if (isset($property['name'], $property['type'])) {
+                $formatted[] = "public {$property['type']} \${$property['name']}";
+            }
+        }
+        return implode(";\n    ", $formatted) . (empty($formatted) ? '' : ';');
     }
 
     /**
@@ -140,10 +197,10 @@ final class StubProcessor
                 $itemContent = $loopContent;
                 if (is_array($item)) {
                     foreach ($item as $key => $value) {
-                        $itemContent = str_replace('{{ ' . $key . ' }}', (string) $value, $itemContent);
+                        $itemContent = str_replace('{{ ' . $key . ' }}', $this->convertValueToString($value), $itemContent);
                     }
                 } else {
-                    $itemContent = str_replace('{{ item }}', (string) $item, $itemContent);
+                    $itemContent = str_replace('{{ item }}', $this->convertValueToString($item), $itemContent);
                 }
                 $output .= $itemContent;
             }

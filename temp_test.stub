@@ -1,0 +1,8 @@
+<?php
+class {{ class }} {
+    {{ properties }}
+
+    {{#each properties}}
+    public {{ type }} ${{ name }};
+    {{/each}}
+}

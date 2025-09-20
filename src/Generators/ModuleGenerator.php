@@ -66,6 +66,88 @@ final class ModuleGenerator implements GeneratorInterface
     }
 
     /**
+     * Get list of files that would be generated (for dry-run)
+     */
+    public function getFilesToGenerate(string $moduleName, string $componentName, array $options = []): array
+    {
+        // For dry-run, we simulate the file generation without actually creating files
+        $files = [];
+        $modulePath = $this->getModulePath($moduleName);
+        $aggregateName = $options['aggregate'] ?? $moduleName;
+
+        // Core module files
+        $files[] = $modulePath . '/manifest.json';
+        $files[] = $modulePath . "/Domain/Models/{$aggregateName}.php";
+        $files[] = $modulePath . "/Domain/ValueObjects/{$aggregateName}Id.php";
+
+        // Domain events
+        $events = ["{$aggregateName}Created", "{$aggregateName}Updated", "{$aggregateName}Deleted"];
+        foreach ($events as $event) {
+            $files[] = $modulePath . "/Domain/Events/{$event}.php";
+        }
+
+        // CQRS commands and queries
+        $commands = ['Create', 'Update', 'Delete'];
+        foreach ($commands as $action) {
+            $commandName = "{$action}{$aggregateName}";
+            $files[] = $modulePath . "/Application/Commands/{$commandName}/{$commandName}Command.php";
+            $files[] = $modulePath . "/Application/Commands/{$commandName}/{$commandName}Handler.php";
+        }
+
+        $queries = ['Get', 'List'];
+        foreach ($queries as $action) {
+            $queryName = "{$action}{$aggregateName}";
+            $files[] = $modulePath . "/Application/Queries/{$queryName}/{$queryName}Query.php";
+            $files[] = $modulePath . "/Application/Queries/{$queryName}/{$queryName}Handler.php";
+        }
+
+        // Repository
+        $files[] = $modulePath . "/Domain/Repositories/{$aggregateName}RepositoryInterface.php";
+        $files[] = $modulePath . "/Infrastructure/Persistence/Eloquent/Repositories/{$aggregateName}Repository.php";
+
+        // Read models and projections
+        $files[] = $modulePath . "/Infrastructure/ReadModels/{$aggregateName}ReadModel.php";
+        $files[] = $modulePath . "/Infrastructure/Projections/{$aggregateName}Projector.php";
+
+        // Service provider
+        $files[] = $modulePath . "/Providers/{$moduleName}ServiceProvider.php";
+
+        // Configuration
+        $files[] = $modulePath . '/Config/config.php';
+
+        // Factories and seeders
+        $files[] = $modulePath . "/Database/Factories/{$aggregateName}Factory.php";
+        $files[] = $modulePath . "/Database/Seeders/{$moduleName}DatabaseSeeder.php";
+
+        // Controller and related classes if API/Web is enabled
+        if ($options['generate_api'] ?? true || $options['generate_web'] ?? true) {
+            $files[] = $modulePath . "/Presentation/Http/Controllers/{$aggregateName}Controller.php";
+            $files[] = $modulePath . "/Presentation/Http/Requests/Store{$aggregateName}Request.php";
+            $files[] = $modulePath . "/Presentation/Http/Requests/Update{$aggregateName}Request.php";
+            $files[] = $modulePath . "/Presentation/Http/Resources/{$aggregateName}Resource.php";
+        }
+
+        // Routes
+        if ($options['generate_api'] ?? true) {
+            $files[] = $modulePath . '/Routes/api.php';
+        }
+        if ($options['generate_web'] ?? true) {
+            $files[] = $modulePath . '/Routes/web.php';
+        }
+
+        // Tests if enabled
+        if ($options['generate_tests'] ?? true) {
+            $files[] = $modulePath . "/Tests/Unit/Domain/{$aggregateName}Test.php";
+            foreach ($commands as $action) {
+                $files[] = $modulePath . "/Tests/Feature/Application/{$action}{$aggregateName}CommandTest.php";
+            }
+            $files[] = $modulePath . "/Tests/Integration/Infrastructure/{$aggregateName}RepositoryTest.php";
+        }
+
+        return $files;
+    }
+
+    /**
      * Generate complete module structure
      */
     private function generateModule(string $moduleName, array $options): array
