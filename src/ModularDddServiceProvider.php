@@ -111,28 +111,8 @@ class ModularDddServiceProvider extends ServiceProvider
 
             $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
-            // Register console commands
-            $this->commands([
-                Console\BenchmarkCommand::class,
-                Console\StressTestCommand::class,
-                Console\Commands\ModuleMakeCommand::class,
-                Console\Commands\AggregateGenerateCommand::class,
-                Console\Commands\CommandGenerateCommand::class,
-                Console\Commands\QueryGenerateCommand::class,
-                Console\Commands\RepositoryGenerateCommand::class,
-                Console\Commands\TestFactoryCommand::class,
-                Console\Commands\ModuleListCommand::class,
-                Console\Commands\ModuleInfoCommand::class,
-                Console\Commands\ModuleEnableCommand::class,
-                Console\Commands\ModuleDisableCommand::class,
-                Console\Commands\ModuleMigrateCommand::class,
-                Console\Commands\ModuleMakeMigrationCommand::class,
-                Console\Commands\ModuleMigrateRollbackCommand::class,
-                Console\Commands\ModuleMigrateStatusCommand::class,
-                Console\Commands\ModuleTestCommand::class,
-                Console\Commands\ModuleHealthCommand::class,
-                Console\Commands\ModuleDocumentationCommand::class,
-            ]);
+            // Register console commands with proper dependency resolution
+            $this->registerConsoleCommands();
         }
 
         // Load health check routes
@@ -143,6 +123,81 @@ class ModularDddServiceProvider extends ServiceProvider
             $this->configureProjectionStrategies();
             $this->registerProjectionListeners();
         });
+    }
+
+    /**
+     * Register console commands with proper dependency resolution for Laravel 11.
+     */
+    private function registerConsoleCommands(): void
+    {
+        // Register the migration repository if not already bound
+        // This is required for the Migrator dependency in Laravel 11
+        if (!$this->app->bound('migration.repository')) {
+            $this->app->singleton('migration.repository', function ($app) {
+                $table = $app['config']['database.migrations'] ?? 'migrations';
+                return new \Illuminate\Database\Migrations\DatabaseMigrationRepository(
+                    $app['db'],
+                    $table
+                );
+            });
+        }
+
+        // Register the migrator if not already bound
+        if (!$this->app->bound('migrator')) {
+            $this->app->singleton('migrator', function ($app) {
+                return new \Illuminate\Database\Migrations\Migrator(
+                    $app['migration.repository'],
+                    $app['db'],
+                    $app['files'],
+                    $app['events']
+                );
+            });
+        }
+
+        // Register commands that require the Migrator dependency with proper resolution
+        $this->app->singleton(Console\Commands\ModuleMigrateCommand::class, function ($app) {
+            return new Console\Commands\ModuleMigrateCommand(
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class),
+                $app->make('migrator')
+            );
+        });
+
+        $this->app->singleton(Console\Commands\ModuleMigrateRollbackCommand::class, function ($app) {
+            return new Console\Commands\ModuleMigrateRollbackCommand(
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class),
+                $app->make('migrator')
+            );
+        });
+
+        $this->app->singleton(Console\Commands\ModuleMigrateStatusCommand::class, function ($app) {
+            return new Console\Commands\ModuleMigrateStatusCommand(
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class),
+                $app->make('migrator')
+            );
+        });
+
+        // Register all console commands
+        $this->commands([
+            Console\BenchmarkCommand::class,
+            Console\StressTestCommand::class,
+            Console\Commands\ModuleMakeCommand::class,
+            Console\Commands\AggregateGenerateCommand::class,
+            Console\Commands\CommandGenerateCommand::class,
+            Console\Commands\QueryGenerateCommand::class,
+            Console\Commands\RepositoryGenerateCommand::class,
+            Console\Commands\TestFactoryCommand::class,
+            Console\Commands\ModuleListCommand::class,
+            Console\Commands\ModuleInfoCommand::class,
+            Console\Commands\ModuleEnableCommand::class,
+            Console\Commands\ModuleDisableCommand::class,
+            Console\Commands\ModuleMigrateCommand::class,
+            Console\Commands\ModuleMakeMigrationCommand::class,
+            Console\Commands\ModuleMigrateRollbackCommand::class,
+            Console\Commands\ModuleMigrateStatusCommand::class,
+            Console\Commands\ModuleTestCommand::class,
+            Console\Commands\ModuleHealthCommand::class,
+            Console\Commands\ModuleDocumentationCommand::class,
+        ]);
     }
 
     private function registerEventSourcing(): void
