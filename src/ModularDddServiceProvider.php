@@ -521,22 +521,7 @@ class ModularDddServiceProvider extends ServiceProvider
             );
         });
 
-        // Register test generators with their dependencies
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class, function ($app) {
-            return new \LaravelModularDDD\Testing\Generators\TestGenerator(
-                $app->make('files'),
-                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
-            );
-        });
-
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class, function ($app) {
-            return new \LaravelModularDDD\Testing\Generators\FactoryGenerator(
-                $app->make('files'),
-                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
-                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
-            );
-        });
-
+        // Register test generators with their dependencies - order matters!
         $this->app->singleton(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class, function ($app) {
             return new \LaravelModularDDD\Testing\Generators\UnitTestGenerator(
                 $app->make('files'),
@@ -555,6 +540,27 @@ class ModularDddServiceProvider extends ServiceProvider
             return new \LaravelModularDDD\Testing\Generators\IntegrationTestGenerator(
                 $app->make('files'),
                 $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\FactoryGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
+            );
+        });
+
+        // Register TestGenerator last as it depends on all other test generators
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\TestGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class),
+                $app->make(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class),
+                $app->make(\LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class),
+                $app->make(\LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class),
+                $app->make(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class)
             );
         });
     }
