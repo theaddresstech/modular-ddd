@@ -77,6 +77,8 @@ final class RepositoryGenerator implements GeneratorInterface
             'class' => $className,
             'aggregate' => $aggregateName,
             'aggregate_lower' => Str::lower($aggregateName),
+            'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
             'id_class' => "{$aggregateName}Id",
             'with_specifications' => $options['with_specifications'] ?? false,
         ]);
@@ -100,6 +102,7 @@ final class RepositoryGenerator implements GeneratorInterface
             'id_class' => "{$aggregateName}Id",
             'interface' => "{$aggregateName}RepositoryInterface",
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
             'with_caching' => $options['with_caching'] ?? true,
             'with_specifications' => $options['with_specifications'] ?? false,
         ]);

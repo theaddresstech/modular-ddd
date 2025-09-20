@@ -99,6 +99,8 @@ final class AggregateGenerator implements GeneratorInterface
             'class' => $className,
             'aggregate' => $aggregateName,
             'aggregate_lower' => Str::lower($aggregateName),
+            'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $path = $this->getModulePath($moduleName) . "/Domain/Exceptions/{$className}.php";

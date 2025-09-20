@@ -387,17 +387,20 @@ final class ModuleGenerator implements GeneratorInterface
         $modulePath = $this->getModulePath($moduleName);
 
         $events = [
-            "{$aggregateName}Created",
-            "{$aggregateName}Updated",
-            "{$aggregateName}Deleted",
+            "{$aggregateName}Created" => 'create',
+            "{$aggregateName}Updated" => 'update',
+            "{$aggregateName}Deleted" => 'delete',
         ];
 
-        foreach ($events as $eventName) {
+        foreach ($events as $eventName => $action) {
             $content = $this->stubProcessor->process('domain-event', [
                 'namespace' => "Modules\\{$moduleName}\\Domain\\Events",
                 'class' => $eventName,
                 'aggregate' => $aggregateName,
                 'aggregate_lower' => Str::lower($aggregateName),
+                'module' => $moduleName,
+                'module_lower' => Str::lower($moduleName),
+                'action' => $action,
             ]);
 
             $path = $modulePath . "/Domain/Events/{$eventName}.php";
@@ -457,6 +460,8 @@ final class ModuleGenerator implements GeneratorInterface
             'class' => "{$aggregateName}ReadModel",
             'aggregate' => $aggregateName,
             'aggregate_lower' => Str::lower($aggregateName),
+            'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
             'table' => Str::snake(Str::plural($aggregateName)),
         ]);
 
