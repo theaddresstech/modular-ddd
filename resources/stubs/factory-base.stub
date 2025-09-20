@@ -1,0 +1,107 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * {{ class }}
+ *
+ * Base factory for {{ module }} module.
+ * Provides common factory methods and configurations.
+ */
+abstract class {{ class }} extends Factory
+{
+    /**
+     * Get a new factory instance for the given model name.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelName
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public static function factoryForModel(string $modelName)
+    {
+        $factory = static::resolveFactoryName($modelName);
+
+        return $factory ? $factory::new() : static::new();
+    }
+
+    /**
+     * Get common attributes that all factories in this module share.
+     */
+    protected function getCommonAttributes(): array
+    {
+        return [
+            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'updated_at' => fn (array $attributes) => $this->faker->dateTimeBetween($attributes['created_at'], 'now'),
+        ];
+    }
+
+    /**
+     * Get module-specific faker data.
+     */
+    protected function getModuleSpecificData(): array
+    {
+        return [
+            'uuid' => $this->faker->uuid(),
+            'name' => $this->faker->sentence(3),
+            'description' => $this->faker->paragraph(),
+            'status' => $this->faker->randomElement(['active', 'inactive']),
+        ];
+    }
+
+    /**
+     * Create a factory state for testing edge cases.
+     */
+    public function withEdgeCaseData(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => str_repeat('a', 255), // Maximum length
+            'description' => str_repeat('b', 1000), // Maximum length
+        ]);
+    }
+
+    /**
+     * Create a factory state for invalid data testing.
+     */
+    public function withInvalidData(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => '', // Invalid: empty
+            'description' => str_repeat('c', 1001), // Invalid: too long
+        ]);
+    }
+
+    /**
+     * Create a factory state for performance testing.
+     */
+    public function forPerformanceTesting(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'performance-test-' . $this->faker->uuid(),
+            'description' => 'Generated for performance testing',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Create a sequence of factories with incrementing values.
+     */
+    public function sequence(...$sequence): static
+    {
+        return $this->state(new \Illuminate\Database\Eloquent\Factories\Sequence(...$sequence));
+    }
+
+    /**
+     * Create factory with specific module context.
+     */
+    public function forModule(string $moduleName): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'module_context' => $moduleName,
+            'module_specific_id' => $moduleName . '_' . $this->faker->uuid(),
+        ]);
+    }
+}

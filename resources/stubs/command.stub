@@ -5,29 +5,20 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use LaravelModularDDD\CQRS\Contracts\CommandInterface;
-{{#if aggregate}}use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;{{/if}}
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
 
 /**
  * {{ class }}
  *
  * Command to {{ action }} a {{ aggregate_lower }}.
- * {{#if async}}Executes asynchronously for better performance.{{/if}}
- * {{#if with_authorization}}Includes authorization checks.{{/if}}
+ * Contains all necessary data for the operation.
  */
 final class {{ class }} implements CommandInterface
 {
-    {{#each properties}}
-    public readonly {{ type }} ${{ name }};
-    {{/each}}
-
     public function __construct(
-        {{#each properties}}
-        {{ type }} ${{ name }}{{#unless @last}},{{/unless}}
-        {{/each}}
+        public readonly {{ aggregate }}Id ${{ aggregate_lower }}Id,
+        public readonly string $data = '',
     ) {
-        {{#each properties}}
-        $this->{{ name }} = ${{ name }};
-        {{/each}}
     }
 
     /**
@@ -35,7 +26,7 @@ final class {{ class }} implements CommandInterface
      */
     public function getCommandName(): string
     {
-        return '{{ module }}.{{ command }}';
+        return '{{ module }}.{{ aggregate_lower }}.{{ action }}';
     }
 
     /**
@@ -46,35 +37,14 @@ final class {{ class }} implements CommandInterface
         return uniqid('cmd_', true);
     }
 
-    {{#if async}}
-    /**
-     * Should execute asynchronously
-     */
-    public function isAsync(): bool
-    {
-        return true;
-    }
-    {{/if}}
-
-    {{#if with_authorization}}
-    /**
-     * Get required permissions
-     */
-    public function getRequiredPermissions(): array
-    {
-        return ['{{ module }}.{{ aggregate_lower }}.{{ action }}'];
-    }
-    {{/if}}
-
     /**
      * Get validation rules
      */
     public function rules(): array
     {
         return [
-            {{#each properties}}
-            '{{ name }}' => '{{ rules }}',
-            {{/each}}
+            '{{ aggregate_lower }}_id' => 'required|string',
+            'data' => 'nullable|string',
         ];
     }
 
@@ -87,8 +57,7 @@ final class {{ class }} implements CommandInterface
             'aggregate' => '{{ aggregate }}',
             'action' => '{{ action }}',
             'module' => '{{ module }}',
-            {{#if async}}'async' => true,{{/if}}
-            {{#if with_authorization}}'requires_auth' => true,{{/if}}
+            'async' => false,
         ];
     }
 
@@ -105,7 +74,7 @@ final class {{ class }} implements CommandInterface
      */
     public function shouldRetry(): bool
     {
-        return {{ action }} !== 'delete';
+        return '{{ action }}' !== 'delete';
     }
 
     /**

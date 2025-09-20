@@ -10,23 +10,15 @@ use LaravelModularDDD\CQRS\Contracts\QueryInterface;
  * {{ class }}
  *
  * Query to {{ action }} {{ aggregate_lower }}(s).
- * {{#if with_caching}}Includes caching for performance optimization.{{/if}}
- * {{#if with_pagination}}Supports pagination for large datasets.{{/if}}
+ * Returns read model data for presentation layer.
  */
 final class {{ class }} implements QueryInterface
 {
-    {{#each properties}}
-    public readonly {{ type }} ${{ name }};
-    {{/each}}
-
     public function __construct(
-        {{#each properties}}
-        {{ type }} ${{ name }}{{#unless @last}},{{/unless}}
-        {{/each}}
+        public readonly ?string $id = null,
+        public readonly int $limit = 10,
+        public readonly int $offset = 0,
     ) {
-        {{#each properties}}
-        $this->{{ name }} = ${{ name }};
-        {{/each}}
     }
 
     /**
@@ -34,7 +26,7 @@ final class {{ class }} implements QueryInterface
      */
     public function getQueryName(): string
     {
-        return '{{ module }}.{{ query }}';
+        return '{{ module }}.{{ aggregate_lower }}.{{ action }}';
     }
 
     /**
@@ -45,13 +37,12 @@ final class {{ class }} implements QueryInterface
         return uniqid('qry_', true);
     }
 
-    {{#if with_caching}}
     /**
      * Get cache key
      */
     public function getCacheKey(): string
     {
-        return '{{ cache_key }}';
+        return '{{ module }}.{{ aggregate_lower }}.{{ action }}.' . md5(serialize($this));
     }
 
     /**
@@ -59,7 +50,7 @@ final class {{ class }} implements QueryInterface
      */
     public function getCacheTtl(): int
     {
-        return {{ cache_ttl }};
+        return 300; // 5 minutes
     }
 
     /**
@@ -77,7 +68,6 @@ final class {{ class }} implements QueryInterface
     {
         return true;
     }
-    {{/if}}
 
     /**
      * Get validation rules
@@ -85,9 +75,9 @@ final class {{ class }} implements QueryInterface
     public function rules(): array
     {
         return [
-            {{#each properties}}
-            '{{ name }}' => '{{ rules }}',
-            {{/each}}
+            'id' => 'nullable|string',
+            'limit' => 'integer|min:1|max:100',
+            'offset' => 'integer|min:0',
         ];
     }
 
@@ -100,8 +90,8 @@ final class {{ class }} implements QueryInterface
             'aggregate' => '{{ aggregate }}',
             'action' => '{{ action }}',
             'module' => '{{ module }}',
-            {{#if with_caching}}'cacheable' => true,{{/if}}
-            {{#if with_pagination}}'paginated' => true,{{/if}}
+            'cacheable' => true,
+            'paginated' => true,
         ];
     }
 

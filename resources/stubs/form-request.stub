@@ -28,25 +28,11 @@ final class {{ class }} extends FormRequest
      */
     public function rules(): array
     {
-        {{#if type}}
-        {{#eq type "store"}}
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
+            'status' => 'nullable|string|in:active,inactive',
         ];
-        {{/eq}}
-        {{#eq type "update"}}
-        return [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-        ];
-        {{/eq}}
-        {{else}}
-        return [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-        ];
-        {{/if}}
     }
 
     /**
@@ -60,6 +46,7 @@ final class {{ class }} extends FormRequest
             'name.max' => 'The {{ aggregate_lower }} name must not exceed 255 characters.',
             'description.string' => 'The description must be a string.',
             'description.max' => 'The description must not exceed 1000 characters.',
+            'status.in' => 'The status must be either active or inactive.',
         ];
     }
 
@@ -71,6 +58,7 @@ final class {{ class }} extends FormRequest
         return [
             'name' => '{{ aggregate_lower }} name',
             'description' => 'description',
+            'status' => 'status',
         ];
     }
 
@@ -81,6 +69,24 @@ final class {{ class }} extends FormRequest
     {
         $validator->after(function ($validator) {
             // Add custom validation logic here
+            if ($this->input('name') && strlen($this->input('name')) < 2) {
+                $validator->errors()->add('name', 'The {{ aggregate_lower }} name must be at least 2 characters.');
+            }
         });
+    }
+
+    /**
+     * Get validated data with transformations
+     */
+    public function validated($key = null, $default = null)
+    {
+        $validated = parent::validated($key, $default);
+
+        // Transform data if needed
+        if (isset($validated['name'])) {
+            $validated['name'] = trim($validated['name']);
+        }
+
+        return $validated;
     }
 }

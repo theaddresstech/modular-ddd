@@ -5,112 +5,75 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Modules\{{ module }}\Application\Commands\{{ command }};
-use Modules\{{ module }}\Application\Commands\Handlers\{{ command }}Handler;
+use Tests\TestCase;
+use Modules\{{ module }}\Application\Commands\{{ action }}{{ aggregate }}\{{ action }}{{ aggregate }}Command;
+use Modules\{{ module }}\Application\Commands\{{ action }}{{ aggregate }}\{{ action }}{{ aggregate }}Handler;
 use Modules\{{ module }}\Domain\Repositories\{{ aggregate }}RepositoryInterface;
 use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
-use Modules\{{ module }}\Domain\Events\{{ event }};
-use Modules\Shared\Infrastructure\Testing\FeatureTestCase;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}{{ action }}d;
 use Ramsey\Uuid\Uuid;
 
 /**
  * {{ class }}
  *
- * Feature tests for {{ command }} command execution.
+ * Feature tests for {{ action }}{{ aggregate }}Command execution.
  * Tests complete command flow including validation, execution, and side effects.
  */
-final class {{ class }} extends FeatureTestCase
+final class {{ class }} extends TestCase
 {
     use RefreshDatabase;
 
     private {{ aggregate }}RepositoryInterface $repository;
-    private {{ command }}Handler $handler;
+    private {{ action }}{{ aggregate }}Handler $handler;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->repository = $this->app->make({{ aggregate }}RepositoryInterface::class);
-        $this->handler = $this->app->make({{ command }}Handler::class);
+        $this->handler = $this->app->make({{ action }}{{ aggregate }}Handler::class);
     }
 
-    public function test_can_execute_{{ command_lower }}_command(): void
+    public function test_can_execute_{{ action_lower }}_{{ aggregate_lower }}_command(): void
     {
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
+            'test data'
         );
 
         $result = $this->handler->handle($command);
 
         $this->assertTrue($result->isSuccess());
-        $this->assertEquals($aggregateId, $result->getData()['id']);
+        $this->assertEquals($aggregateId->toString(), $result->getData()['id']);
 
-        // Verify aggregate was saved
+        // Verify aggregate was processed
         ${{ aggregate_lower }} = $this->repository->findById($aggregateId);
         $this->assertNotNull(${{ aggregate_lower }});
-        $this->assertEquals('Test {{ aggregate }}', ${{ aggregate_lower }}->getName());
-        $this->assertEquals('Test description', ${{ aggregate_lower }}->getDescription());
     }
 
     public function test_command_validation_fails_with_invalid_data(): void
     {
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            '', // Invalid empty name
-            'Test description'
+            '' // Invalid empty data
         );
 
         $result = $this->handler->handle($command);
 
         $this->assertFalse($result->isSuccess());
-        $this->assertStringContainsString('name cannot be empty', $result->getError());
-    }
-
-    public function test_command_handles_concurrent_modification(): void
-    {
-        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-
-        // Create initial aggregate
-        $createCommand = new {{ command }}(
-            $aggregateId,
-            'Initial Name',
-            'Initial description'
-        );
-        $this->handler->handle($createCommand);
-
-        // Simulate concurrent modifications
-        $command1 = new {{ command }}(
-            $aggregateId,
-            'First Update',
-            'First description'
-        );
-
-        $command2 = new {{ command }}(
-            $aggregateId,
-            'Second Update',
-            'Second description'
-        );
-
-        $result1 = $this->handler->handle($command1);
-        $result2 = $this->handler->handle($command2);
-
-        // One should succeed, one should handle concurrency
-        $this->assertTrue($result1->isSuccess() || $result2->isSuccess());
+        $this->assertStringContainsString('validation', strtolower($result->getError()));
     }
 
     public function test_command_emits_domain_events(): void
     {
-        $this->expectsEvents([{{ event }}::class]);
+        $this->expectsEvents([{{ aggregate }}{{ action }}d::class]);
 
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
+            'test data'
         );
 
         $this->handler->handle($command);
@@ -119,16 +82,15 @@ final class {{ class }} extends FeatureTestCase
     public function test_command_handles_business_rule_violations(): void
     {
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            'invalid-format-name',
-            'Test description'
+            'invalid-data-format'
         );
 
         $result = $this->handler->handle($command);
 
         $this->assertFalse($result->isSuccess());
-        $this->assertStringContainsString('business rule violation', $result->getError());
+        $this->assertStringContainsString('business rule', strtolower($result->getError()));
     }
 
     public function test_command_handles_repository_failures(): void
@@ -139,13 +101,12 @@ final class {{ class }} extends FeatureTestCase
             ->willThrowException(new \RuntimeException('Repository error'));
 
         $this->app->instance({{ aggregate }}RepositoryInterface::class, $mockRepository);
-        $handler = $this->app->make({{ command }}Handler::class);
+        $handler = $this->app->make({{ action }}{{ aggregate }}Handler::class);
 
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
+            'test data'
         );
 
         $result = $handler->handle($command);
@@ -154,54 +115,14 @@ final class {{ class }} extends FeatureTestCase
         $this->assertStringContainsString('Repository error', $result->getError());
     }
 
-    public function test_command_maintains_transaction_integrity(): void
-    {
-        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-
-        // Create command that will fail after partial execution
-        $command = new {{ command }}(
-            $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
-        );
-
-        // Ensure transaction rollback on failure
-        try {
-            $this->handler->handle($command);
-        } catch (\Exception $e) {
-            // Verify no partial state remains
-            ${{ aggregate_lower }} = $this->repository->findById($aggregateId);
-            $this->assertNull(${{ aggregate_lower }});
-        }
-    }
-
-    public function test_command_respects_authorization(): void
-    {
-        // Test with unauthorized user
-        $this->actingAs($this->createUser(['role' => 'guest']));
-
-        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
-            $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
-        );
-
-        $result = $this->handler->handle($command);
-
-        $this->assertFalse($result->isSuccess());
-        $this->assertStringContainsString('unauthorized', strtolower($result->getError()));
-    }
-
     public function test_command_performance_within_limits(): void
     {
         $startTime = microtime(true);
 
         $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
-        $command = new {{ command }}(
+        $command = new {{ action }}{{ aggregate }}Command(
             $aggregateId,
-            'Test {{ aggregate }}',
-            'Test description'
+            'test data'
         );
 
         $this->handler->handle($command);

@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use LaravelModularDDD\CQRS\Contracts\QueryHandlerInterface;
-use Modules\{{ module }}\Infrastructure\ReadModels\{{ read_model }};
-{{#if with_caching}}use LaravelModularDDD\CQRS\Caching\MultiTierCacheManager;{{/if}}
-use {{ namespace }}\{{ query_class }};
+use LaravelModularDDD\CQRS\Caching\MultiTierCacheManager;
+use Modules\{{ module }}\Infrastructure\ReadModels\{{ aggregate }}ReadModel;
 
 /**
  * {{ class }}
  *
- * Handles {{ query }} query execution.
- * {{#if with_caching}}Uses multi-tier caching for performance.{{/if}}
- * {{#if with_pagination}}Supports pagination and filtering.{{/if}}
+ * Handles {{ query_class }} query execution.
+ * Uses multi-tier caching for performance optimization.
  */
 final class {{ class }} implements QueryHandlerInterface
 {
     public function __construct(
-        {{#if with_caching}}private readonly MultiTierCacheManager $cacheManager{{/if}}
+        private readonly MultiTierCacheManager $cacheManager
     ) {}
 
     /**
@@ -27,7 +25,6 @@ final class {{ class }} implements QueryHandlerInterface
      */
     public function handle({{ query_class }} $query): mixed
     {
-        {{#if with_caching}}
         // Check cache first
         if ($query->shouldCache()) {
             $cached = $this->cacheManager->get($query);
@@ -45,9 +42,6 @@ final class {{ class }} implements QueryHandlerInterface
         }
 
         return $result;
-        {{else}}
-        return $this->executeQuery($query);
-        {{/if}}
     }
 
     /**
@@ -55,7 +49,16 @@ final class {{ class }} implements QueryHandlerInterface
      */
     private function executeQuery({{ query_class }} $query): mixed
     {
-        {{ handle_logic }}
+        if ($query->id) {
+            // Get single {{ aggregate_lower }}
+            return {{ aggregate }}ReadModel::find($query->id);
+        }
+
+        // Get paginated list of {{ aggregate_lower }}s
+        return {{ aggregate }}ReadModel::query()
+            ->offset($query->offset)
+            ->limit($query->limit)
+            ->get();
     }
 
     /**
