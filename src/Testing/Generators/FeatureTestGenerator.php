@@ -404,7 +404,7 @@ final class FeatureTestGenerator
         return [
             'rules' => $this->extractAllValidationRules($moduleInfo),
             'errors' => $this->extractErrorResponses($moduleInfo),
-            'scenarios' => $this->extractValidationScenarios($moduleInfo),
+            'scenarios' => $this->extractValidationScenarioNames($moduleInfo),
         ];
     }
 
@@ -613,9 +613,9 @@ final class FeatureTestGenerator
     }
 
     /**
-     * Extract validation scenarios.
+     * Extract validation scenario names.
      */
-    private function extractValidationScenarios(array $moduleInfo): array
+    private function extractValidationScenarioNames(array $moduleInfo): array
     {
         return [
             'missing_required_fields',
