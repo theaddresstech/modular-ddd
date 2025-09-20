@@ -419,6 +419,20 @@ class ModularDddServiceProvider extends ServiceProvider
 
     private function registerGenerators(): void
     {
+        // Register Module Discovery and Registry
+        $this->app->singleton(\LaravelModularDDD\Support\ModuleDiscovery::class, function ($app) {
+            return new \LaravelModularDDD\Support\ModuleDiscovery(
+                config('modular-ddd.modules_path', base_path('Modules')),
+                $app->make('files')
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Support\ModuleRegistry::class, function ($app) {
+            return new \LaravelModularDDD\Support\ModuleRegistry(
+                $app->make(\LaravelModularDDD\Support\ModuleDiscovery::class)
+            );
+        });
+
         // Register all generators
         $this->app->singleton(\LaravelModularDDD\Generators\ModuleGenerator::class);
         $this->app->singleton(\LaravelModularDDD\Generators\AggregateGenerator::class);
