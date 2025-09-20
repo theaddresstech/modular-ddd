@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use LaravelModularDDD\CQRS\Contracts\QueryHandlerInterface;
+use LaravelModularDDD\CQRS\Contracts\QueryInterface;
 use LaravelModularDDD\CQRS\Caching\MultiTierCacheManager;
 use Modules\{{ module }}\Infrastructure\ReadModels\{{ aggregate }}ReadModel;
 
@@ -70,10 +71,30 @@ final class {{ class }} implements QueryHandlerInterface
     }
 
     /**
-     * Get handler priority
+     * Check if handler can handle the query
      */
-    public function getPriority(): int
+    public function canHandle(QueryInterface $query): bool
     {
-        return 0;
+        return $query instanceof {{ query_class }};
+    }
+
+    /**
+     * Get estimated execution time in milliseconds
+     */
+    public function getEstimatedExecutionTime(QueryInterface $query): int
+    {
+        // Base execution time: 100ms
+        $baseTime = 100;
+
+        // Add time based on query complexity
+        $complexityTime = $query->getComplexity() * 50;
+
+        // Add time if pagination is used
+        $paginationTime = $query->getPagination() ? 25 : 0;
+
+        // Add time based on number of filters
+        $filterTime = count($query->getFilters()) * 10;
+
+        return $baseTime + $complexityTime + $paginationTime + $filterTime;
     }
 }

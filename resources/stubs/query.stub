@@ -96,10 +96,90 @@ final class {{ class }} implements QueryInterface
     }
 
     /**
+     * Get query complexity score (1-10, 10 = most complex)
+     */
+    public function getComplexity(): int
+    {
+        $complexity = 1;
+
+        // Add complexity for ID lookup
+        if ($this->id !== null) {
+            $complexity += 1;
+        }
+
+        // Add complexity for large result sets
+        if ($this->limit > 50) {
+            $complexity += 2;
+        }
+
+        return min(10, $complexity);
+    }
+
+    /**
      * Get query timeout in seconds
      */
     public function getTimeout(): int
     {
         return 30;
+    }
+
+    /**
+     * Get pagination parameters
+     */
+    public function getPagination(): ?array
+    {
+        return [
+            'limit' => $this->limit,
+            'offset' => $this->offset,
+        ];
+    }
+
+    /**
+     * Get sorting parameters
+     */
+    public function getSorting(): array
+    {
+        return [
+            'created_at' => 'desc',
+        ];
+    }
+
+    /**
+     * Get filtering parameters
+     */
+    public function getFilters(): array
+    {
+        $filters = [];
+
+        if ($this->id !== null) {
+            $filters['id'] = $this->id;
+        }
+
+        return $filters;
+    }
+
+    /**
+     * Convert query to array for caching/logging
+     */
+    public function toArray(): array
+    {
+        return [
+            'query_class' => static::class,
+            'query_id' => $this->getQueryId(),
+            'query_name' => $this->getQueryName(),
+            'id' => $this->id,
+            'limit' => $this->limit,
+            'offset' => $this->offset,
+            'cache_key' => $this->getCacheKey(),
+            'cache_ttl' => $this->getCacheTtl(),
+            'cache_tags' => $this->getCacheTags(),
+            'should_cache' => $this->shouldCache(),
+            'complexity' => $this->getComplexity(),
+            'timeout' => $this->getTimeout(),
+            'pagination' => $this->getPagination(),
+            'sorting' => $this->getSorting(),
+            'filters' => $this->getFilters(),
+            'metadata' => $this->getMetadata(),
+        ];
     }
 }

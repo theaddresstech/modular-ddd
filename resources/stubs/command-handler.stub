@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use LaravelModularDDD\CQRS\Contracts\CommandHandlerInterface;
+use LaravelModularDDD\CQRS\Contracts\CommandInterface;
 use Modules\{{ module }}\Domain\Repositories\{{ repository_interface }};
 use Modules\{{ module }}\Domain\Exceptions\{{ aggregate }}Exception;
 use {{ namespace }}\{{ command_class }};
@@ -35,6 +36,14 @@ final class {{ class }} implements CommandHandlerInterface
     public function getHandledCommandType(): string
     {
         return {{ command_class }}::class;
+    }
+
+    /**
+     * Check if handler can handle the command
+     */
+    public function canHandle(CommandInterface $command): bool
+    {
+        return $command instanceof {{ command_class }};
     }
 
     /**

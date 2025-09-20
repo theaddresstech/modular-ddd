@@ -38,9 +38,9 @@ final class {{ class }} implements CommandInterface
     }
 
     /**
-     * Get validation rules
+     * Get command validation rules
      */
-    public function rules(): array
+    public function getValidationRules(): array
     {
         return [
             '{{ aggregate_lower }}_id' => 'required|string',
@@ -83,5 +83,32 @@ final class {{ class }} implements CommandInterface
     public function getMaxRetries(): int
     {
         return 3;
+    }
+
+    /**
+     * Get command timeout in seconds
+     */
+    public function getTimeout(): int
+    {
+        return 30;
+    }
+
+    /**
+     * Convert command to array for serialization
+     */
+    public function toArray(): array
+    {
+        return [
+            'command_class' => static::class,
+            'command_id' => $this->getCommandId(),
+            'command_name' => $this->getCommandName(),
+            '{{ aggregate_lower }}_id' => $this->{{ aggregate_lower }}Id->toString(),
+            'data' => $this->data,
+            'metadata' => $this->getMetadata(),
+            'priority' => $this->getPriority(),
+            'timeout' => $this->getTimeout(),
+            'should_retry' => $this->shouldRetry(),
+            'max_retries' => $this->getMaxRetries(),
+        ];
     }
 }
