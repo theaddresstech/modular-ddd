@@ -640,8 +640,10 @@ final class ModuleGenerator implements GeneratorInterface
     private function generateModuleConfig(string $moduleName, array $options): string
     {
         $configContent = $this->stubProcessor->process('module-config', [
-            'module' => $moduleName,
+            'moduleName' => $moduleName,
             'module_lower' => Str::lower($moduleName),
+            'namespace' => 'Modules\\' . $moduleName,
+            'aggregateName' => $options['aggregate'] ?? $moduleName,
         ]);
 
         $configPath = $this->getModulePath($moduleName) . '/Config/config.php';

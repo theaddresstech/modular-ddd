@@ -65,7 +65,9 @@ class ProcessCommandJob implements ShouldQueue
             'attempts' => $this->attempts(),
         ]);
 
-        // TODO: Send to dead letter queue or alert system
+        // Send failed command to dead letter queue for analysis
+        $deadLetterQueue = app()->make(\LaravelModularDDD\CQRS\ErrorHandling\DeadLetterQueue::class);
+        $deadLetterQueue->store($this->command, $exception, $this->attempts());
     }
 
     public function backoff(): array
