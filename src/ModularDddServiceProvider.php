@@ -79,6 +79,23 @@ class ModularDddServiceProvider extends ServiceProvider
             $this->commands([
                 Console\BenchmarkCommand::class,
                 Console\StressTestCommand::class,
+                Console\Commands\ModuleMakeCommand::class,
+                Console\Commands\AggregateGenerateCommand::class,
+                Console\Commands\CommandGenerateCommand::class,
+                Console\Commands\QueryGenerateCommand::class,
+                Console\Commands\RepositoryGenerateCommand::class,
+                Console\Commands\TestFactoryCommand::class,
+                Console\Commands\ModuleListCommand::class,
+                Console\Commands\ModuleInfoCommand::class,
+                Console\Commands\ModuleEnableCommand::class,
+                Console\Commands\ModuleDisableCommand::class,
+                Console\Commands\ModuleMigrateCommand::class,
+                Console\Commands\ModuleMakeMigrationCommand::class,
+                Console\Commands\ModuleMigrateRollbackCommand::class,
+                Console\Commands\ModuleMigrateStatusCommand::class,
+                Console\Commands\ModuleTestCommand::class,
+                Console\Commands\ModuleHealthCommand::class,
+                Console\Commands\ModuleDocumentationCommand::class,
             ]);
         }
 
