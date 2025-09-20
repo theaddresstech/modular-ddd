@@ -429,7 +429,8 @@ class ModularDddServiceProvider extends ServiceProvider
 
         $this->app->singleton(\LaravelModularDDD\Support\ModuleRegistry::class, function ($app) {
             return new \LaravelModularDDD\Support\ModuleRegistry(
-                $app->make(\LaravelModularDDD\Support\ModuleDiscovery::class)
+                $app->make(\LaravelModularDDD\Support\ModuleDiscovery::class),
+                $app->make('cache')->store()
             );
         });
 
