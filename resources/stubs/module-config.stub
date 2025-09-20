@@ -1,0 +1,49 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Module: {{ moduleName }}
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the {{ moduleName }} module
+    |
+    */
+
+    'enabled' => true,
+
+    'namespace' => '{{ namespace }}',
+
+    'aggregate' => '{{ aggregateName }}',
+
+    'providers' => [
+        {{ namespace }}\Providers\{{ moduleName }}ServiceProvider::class,
+    ],
+
+    'aliases' => [],
+
+    'files' => [],
+
+    'requires' => [],
+
+    'priority' => 0,
+
+    'auto-discovery' => [
+        'enabled' => true,
+        'commands' => true,
+        'migrations' => true,
+        'routes' => true,
+    ],
+
+    'event_sourcing' => [
+        'enabled' => true,
+        'snapshot_frequency' => 100,
+        'projection_enabled' => true,
+    ],
+
+    'cqrs' => [
+        'enabled' => true,
+        'command_bus' => 'default',
+        'query_bus' => 'default',
+    ],
+];
