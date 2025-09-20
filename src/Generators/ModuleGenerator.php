@@ -595,6 +595,7 @@ final class ModuleGenerator implements GeneratorInterface
                 'module' => $moduleName,
                 'module_lower' => Str::lower($moduleName),
                 'action' => $action,
+                'action_lower' => Str::lower($action),
             ]);
 
             $featureTestPath = $modulePath . "/Tests/Feature/Application/{$action}{$aggregateName}CommandTest.php";
