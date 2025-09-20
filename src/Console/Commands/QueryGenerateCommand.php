@@ -20,7 +20,7 @@ final class QueryGenerateCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:query
+    protected $signature = 'modular:make:query
                            {module : The module name}
                            {query : The query name}
                            {--handler : Generate query handler}

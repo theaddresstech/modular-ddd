@@ -22,7 +22,7 @@ final class ModuleHealthCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:health
+    protected $signature = 'modular:health
                            {module? : Check specific module (optional)}
                            {--fix : Attempt to fix issues automatically}
                            {--detailed : Show detailed health information}

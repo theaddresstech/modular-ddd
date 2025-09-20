@@ -60,6 +60,7 @@ class ModularDddServiceProvider extends ServiceProvider
         $this->registerMonitoring();
         $this->registerSecurity();
         $this->registerModuleCommunication();
+        $this->registerGenerators();
     }
 
     public function boot(): void
@@ -414,6 +415,25 @@ class ModularDddServiceProvider extends ServiceProvider
                 $bridge->handle($event);
             }
         });
+    }
+
+    private function registerGenerators(): void
+    {
+        // Register all generators
+        $this->app->singleton(\LaravelModularDDD\Generators\ModuleGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\AggregateGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\CommandGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\QueryGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\RepositoryGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\ServiceGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Generators\StubProcessor::class);
+
+        // Register test generators
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class);
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class);
     }
 
     public function provides(): array

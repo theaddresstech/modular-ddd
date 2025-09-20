@@ -21,7 +21,7 @@ final class ModuleMakeCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:make
+    protected $signature = 'modular:make:module
                            {name : The name of the module}
                            {--aggregate= : The main aggregate name (defaults to module name)}
                            {--force : Overwrite existing files}

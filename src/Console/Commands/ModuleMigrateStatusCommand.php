@@ -21,7 +21,7 @@ final class ModuleMigrateStatusCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:migrate:status
+    protected $signature = 'modular:migrate:status
                            {module? : The module to check status for (optional)}
                            {--pending : Show only pending migrations}
                            {--ran : Show only completed migrations}

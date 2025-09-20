@@ -20,7 +20,7 @@ final class ModuleInfoCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:info
+    protected $signature = 'modular:info
                            {module : The module name to get information about}
                            {--components : Show detailed component information}
                            {--dependencies : Show dependency analysis}

@@ -20,7 +20,7 @@ final class CommandGenerateCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:command
+    protected $signature = 'modular:make:command
                            {module : The module name}
                            {command : The command name}
                            {--aggregate= : The target aggregate name}

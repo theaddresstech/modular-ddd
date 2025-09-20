@@ -19,7 +19,7 @@ final class ModuleListCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:list
+    protected $signature = 'modular:list
                            {--enabled : Show only enabled modules}
                            {--disabled : Show only disabled modules}
                            {--detailed : Show detailed module information}

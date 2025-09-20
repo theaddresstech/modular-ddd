@@ -20,7 +20,7 @@ final class ModuleEnableCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:enable
+    protected $signature = 'modular:enable
                            {modules* : The module names to enable}
                            {--all : Enable all modules}
                            {--with-dependencies : Also enable required dependencies}

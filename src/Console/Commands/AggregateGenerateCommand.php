@@ -20,7 +20,7 @@ final class AggregateGenerateCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:aggregate
+    protected $signature = 'modular:make:aggregate
                            {module : The module name}
                            {aggregate : The aggregate name}
                            {--force : Overwrite existing files}

@@ -20,7 +20,7 @@ final class ModuleDisableCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:disable
+    protected $signature = 'modular:disable
                            {modules* : The module names to disable}
                            {--with-dependents : Also disable modules that depend on these}
                            {--force : Force disable even if other modules depend on them}

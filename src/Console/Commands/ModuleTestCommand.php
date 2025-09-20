@@ -21,7 +21,7 @@ final class ModuleTestCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:test
+    protected $signature = 'modular:test
                            {module? : The module to generate tests for (optional, generates for all if not specified)}
                            {--type=all : Type of tests to generate (unit, feature, integration, factories, all)}
                            {--aggregate= : Specific aggregate to generate tests for}

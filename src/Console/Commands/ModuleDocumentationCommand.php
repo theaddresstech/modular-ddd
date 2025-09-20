@@ -21,7 +21,7 @@ final class ModuleDocumentationCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:docs
+    protected $signature = 'modular:docs
                            {module? : The module to document (optional, documents all if not specified)}
                            {--format=markdown : Output format (markdown, html, json)}
                            {--output= : Output directory (defaults to docs/)}

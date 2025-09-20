@@ -21,7 +21,7 @@ final class ModuleMigrateRollbackCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:migrate:rollback
+    protected $signature = 'modular:migrate:rollback
                            {module : The module to rollback}
                            {--step=1 : The number of migrations to rollback}
                            {--force : Force the operation to run when in production}

@@ -21,7 +21,7 @@ final class ModuleMigrateCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:migrate
+    protected $signature = 'modular:migrate
                            {module? : The module to migrate (optional, migrates all if not specified)}
                            {--force : Force the operation to run when in production}
                            {--pretend : Dump the SQL queries that would be run}

@@ -22,7 +22,7 @@ final class ModuleMakeMigrationCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:make:migration
+    protected $signature = 'modular:make:migration
                            {module : The module name}
                            {name : The name of the migration}
                            {--create= : The table to be created}

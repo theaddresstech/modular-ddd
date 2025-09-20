@@ -21,7 +21,7 @@ final class TestFactoryCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:factory
+    protected $signature = 'modular:make:factory
                            {module : The module to generate factories for}
                            {type? : Type of factory to generate (aggregate, entity, value-object)}
                            {name? : Specific name of the component to generate factory for}

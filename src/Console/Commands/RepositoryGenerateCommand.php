@@ -20,7 +20,7 @@ final class RepositoryGenerateCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'module:repository
+    protected $signature = 'modular:make:repository
                            {module : The module name}
                            {aggregate : The aggregate name}
                            {--interface-only : Generate only the repository interface}
