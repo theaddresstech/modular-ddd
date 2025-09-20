@@ -1,0 +1,86 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Foundation\Http\FormRequest;
+
+/**
+ * {{ class }}
+ *
+ * Form request for {{ type }}ing {{ aggregate }} data.
+ * Provides validation rules and authorization logic.
+ */
+final class {{ class }} extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request
+     */
+    public function authorize(): bool
+    {
+        // Add authorization logic here
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request
+     */
+    public function rules(): array
+    {
+        {{#if type}}
+        {{#eq type "store"}}
+        return [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+        ];
+        {{/eq}}
+        {{#eq type "update"}}
+        return [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+        ];
+        {{/eq}}
+        {{else}}
+        return [
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+        ];
+        {{/if}}
+    }
+
+    /**
+     * Get custom messages for validator errors
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'The {{ aggregate_lower }} name is required.',
+            'name.string' => 'The {{ aggregate_lower }} name must be a string.',
+            'name.max' => 'The {{ aggregate_lower }} name must not exceed 255 characters.',
+            'description.string' => 'The description must be a string.',
+            'description.max' => 'The description must not exceed 1000 characters.',
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors
+     */
+    public function attributes(): array
+    {
+        return [
+            'name' => '{{ aggregate_lower }} name',
+            'description' => 'description',
+        ];
+    }
+
+    /**
+     * Configure the validator instance
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            // Add custom validation logic here
+        });
+    }
+}

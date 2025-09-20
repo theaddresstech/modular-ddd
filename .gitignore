@@ -1,0 +1,79 @@
+# Composer
+/vendor/
+composer.phar
+composer.lock
+
+# PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+phpunit.xml.bak
+coverage/
+reports/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.testing
+.env.backup
+.env.production
+
+# Laravel
+/bootstrap/cache/
+/storage/*.key
+/storage/logs/
+/public/storage
+/public/hot
+
+# Testing
+/tests/reports/
+/tests/coverage/
+*.log
+
+# Build artifacts
+/build/
+/dist/
+
+# Documentation build
+/docs/_build/
+/docs/.doctrees/
+
+# Node (if using for documentation or assets)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Cache
+.cache/
+*.cache
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Package build
+*.tar.gz
+*.zip

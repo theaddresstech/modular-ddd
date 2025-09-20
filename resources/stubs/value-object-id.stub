@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\Core\Domain\ValueObject;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+
+/**
+ * {{ aggregate }} ID Value Object
+ *
+ * Strongly-typed identifier for {{ aggregate }} aggregates.
+ * Ensures type safety and encapsulates ID generation logic.
+ */
+final class {{ class }} extends ValueObject
+{
+    private string $value;
+
+    private function __construct(string $value)
+    {
+        $this->guardAgainstEmptyValue($value);
+        $this->guardAgainstInvalidFormat($value);
+
+        $this->value = $value;
+    }
+
+    /**
+     * Create new ID
+     */
+    public static function generate(): self
+    {
+        return new self(Str::uuid()->toString());
+    }
+
+    /**
+     * Create from existing value
+     */
+    public static function fromString(string $value): self
+    {
+        return new self($value);
+    }
+
+    /**
+     * Get string representation
+     */
+    public function toString(): string
+    {
+        return $this->value;
+    }
+
+    /**
+     * String conversion
+     */
+    public function __toString(): string
+    {
+        return $this->value;
+    }
+
+    /**
+     * Check equality
+     */
+    public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
+
+    /**
+     * Get array representation for serialization
+     */
+    public function toArray(): array
+    {
+        return ['value' => $this->value];
+    }
+
+    /**
+     * Guard against empty value
+     */
+    private function guardAgainstEmptyValue(string $value): void
+    {
+        if (empty($value)) {
+            throw new InvalidArgumentException('{{ aggregate }} ID cannot be empty');
+        }
+    }
+
+    /**
+     * Guard against invalid UUID format
+     */
+    private function guardAgainstInvalidFormat(string $value): void
+    {
+        if (!Str::isUuid($value)) {
+            throw new InvalidArgumentException('{{ aggregate }} ID must be a valid UUID');
+        }
+    }
+}

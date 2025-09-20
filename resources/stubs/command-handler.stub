@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\CQRS\Contracts\CommandHandlerInterface;
+use Modules\{{ module }}\Domain\Repositories\{{ repository_interface }};
+use Modules\{{ module }}\Domain\Exceptions\{{ aggregate }}Exception;
+use {{ namespace }}\{{ command_class }};
+
+/**
+ * {{ class }}
+ *
+ * Handles {{ command }} command execution.
+ * Orchestrates domain operations and ensures consistency.
+ */
+final class {{ class }} implements CommandHandlerInterface
+{
+    public function __construct(
+        private readonly {{ repository_interface }} $repository
+    ) {}
+
+    /**
+     * Handle the command
+     */
+    public function handle({{ command_class }} $command): mixed
+    {
+        {{ handle_logic }}
+    }
+
+    /**
+     * Get handled command type
+     */
+    public function getHandledCommandType(): string
+    {
+        return {{ command_class }}::class;
+    }
+
+    /**
+     * Get handler priority
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+}

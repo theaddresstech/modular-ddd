@@ -1,0 +1,319 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ factoryNamespace }};
+
+use {{ aggregateNamespace }};
+use LaravelModularDDD\Testing\Factories\BaseFactory;
+
+/**
+ * {{ aggregate }}Factory
+ *
+ * Factory for creating {{ aggregate }} test instances.
+ * Respects domain invariants and business rules.
+ *
+ * @extends BaseFactory<{{ aggregate }}>
+ */
+final class {{ aggregate }}Factory extends BaseFactory
+{
+    /**
+     * The model this factory creates.
+     */
+    protected string $model = {{ aggregate }}::class;
+
+    /**
+     * Define the model's default state.
+     */
+    public function definition(): array
+    {
+        return [
+            'id' => $this->faker->uuid,
+            'name' => $this->faker->company,
+            'description' => $this->faker->paragraph,
+            'status' => $this->faker->randomElement(['active', 'inactive']),
+            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'updated_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+        ];
+    }
+
+    /**
+     * Create an active {{ aggregate }}.
+     */
+    public function active(): static
+    {
+        return $this->state([
+            'status' => 'active',
+            'activated_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+        ]);
+    }
+
+    /**
+     * Create an inactive {{ aggregate }}.
+     */
+    public function inactive(): static
+    {
+        return $this->state([
+            'status' => 'inactive',
+            'activated_at' => null,
+        ]);
+    }
+
+    /**
+     * Create a deleted {{ aggregate }}.
+     */
+    public function deleted(): static
+    {
+        return $this->state([
+            'status' => 'deleted',
+            'deleted_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+        ]);
+    }
+
+    /**
+     * Create a recently created {{ aggregate }}.
+     */
+    public function recent(): static
+    {
+        return $this->state([
+            'created_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
+            'updated_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
+        ]);
+    }
+
+    /**
+     * Create an old {{ aggregate }}.
+     */
+    public function old(): static
+    {
+        return $this->state([
+            'created_at' => $this->faker->dateTimeBetween('-2 years', '-1 year'),
+            'updated_at' => $this->faker->dateTimeBetween('-2 years', '-1 year'),
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate }} with specific name.
+     */
+    public function withName(string $name): static
+    {
+        return $this->state([
+            'name' => $name,
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate }} with specific description.
+     */
+    public function withDescription(string $description): static
+    {
+        return $this->state([
+            'description' => $description,
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate }} with valid business data.
+     */
+    public function validBusiness(): static
+    {
+        return $this->state([
+            'name' => $this->faker->company,
+            'description' => $this->faker->catchPhrase,
+            'status' => 'active',
+            'email' => $this->faker->companyEmail,
+            'phone' => $this->faker->phoneNumber,
+            'website' => $this->faker->url,
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate }} with minimal required data.
+     */
+    public function minimal(): static
+    {
+        return $this->state([
+            'name' => $this->faker->word,
+            'description' => 'Minimal description',
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate }} with all optional fields populated.
+     */
+    public function complete(): static
+    {
+        return $this->state([
+            'name' => $this->faker->company,
+            'description' => $this->faker->paragraph(3),
+            'status' => 'active',
+            'tags' => $this->faker->words(5),
+            'metadata' => [
+                'source' => 'factory',
+                'test' => true,
+                'version' => '1.0',
+            ],
+            'settings' => [
+                'notifications' => true,
+                'public' => false,
+                'featured' => $this->faker->boolean,
+            ],
+        ]);
+    }
+
+    /**
+     * Create instance and return the aggregate object.
+     */
+    public function createAggregate(array $attributes = []): {{ aggregate }}
+    {
+        $data = $this->make($attributes)->toArray();
+
+        return {{ aggregate }}::create(
+            $data['id'],
+            $data['name'],
+            $data['description']
+        );
+    }
+
+    /**
+     * Create multiple aggregates.
+     */
+    public function createMultiple(int $count, array $attributes = []): array
+    {
+        $aggregates = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $aggregates[] = $this->createAggregate($attributes);
+        }
+
+        return $aggregates;
+    }
+
+    /**
+     * Create aggregate with events applied.
+     */
+    public function withEvents(): {{ aggregate }}
+    {
+        $aggregate = $this->createAggregate();
+
+        // Apply some domain events
+        $aggregate->updateName($this->faker->company);
+        $aggregate->updateDescription($this->faker->paragraph);
+
+        if ($this->faker->boolean) {
+            $aggregate->activate();
+        }
+
+        return $aggregate;
+    }
+
+    /**
+     * Create aggregate in specific state for testing state transitions.
+     */
+    public function inState(string $state): static
+    {
+        return match ($state) {
+            'draft' => $this->state(['status' => 'draft']),
+            'pending_approval' => $this->state(['status' => 'pending_approval']),
+            'approved' => $this->state(['status' => 'approved']),
+            'rejected' => $this->state(['status' => 'rejected']),
+            'archived' => $this->state(['status' => 'archived']),
+            default => $this->state(['status' => $state]),
+        };
+    }
+
+    /**
+     * Create aggregate with relationships.
+     */
+    public function withRelationships(): static
+    {
+        return $this->state([
+            'parent_id' => $this->faker->uuid,
+            'category_id' => $this->faker->uuid,
+            'owner_id' => $this->faker->uuid,
+        ]);
+    }
+
+    /**
+     * Create aggregate for performance testing.
+     */
+    public function forPerformanceTest(): static
+    {
+        return $this->state([
+            'name' => 'Performance Test Entity',
+            'description' => 'Created for performance testing',
+            'status' => 'active',
+            'large_data' => str_repeat('x', 1000), // Large text field
+        ]);
+    }
+
+    /**
+     * Create aggregate that will cause validation errors.
+     */
+    public function invalid(): static
+    {
+        return $this->state([
+            'name' => '', // Invalid: empty name
+            'description' => null, // Invalid: null description
+            'status' => 'invalid_status', // Invalid status
+        ]);
+    }
+
+    /**
+     * Create aggregate with boundary values for testing edge cases.
+     */
+    public function boundary(): static
+    {
+        return $this->state([
+            'name' => str_repeat('a', 255), // Maximum length
+            'description' => str_repeat('b', 65535), // Maximum text length
+            'priority' => 999999, // Maximum priority
+            'percentage' => 100.00, // Maximum percentage
+        ]);
+    }
+
+    /**
+     * Sequence generator for unique values.
+     */
+    public function sequence(string $field, string $prefix = ''): static
+    {
+        static $counters = [];
+
+        if (!isset($counters[$field])) {
+            $counters[$field] = 1;
+        }
+
+        $value = $prefix . str_pad((string) $counters[$field], 4, '0', STR_PAD_LEFT);
+        $counters[$field]++;
+
+        return $this->state([$field => $value]);
+    }
+
+    /**
+     * Create aggregate for specific business scenario.
+     */
+    public function forScenario(string $scenario): static
+    {
+        return match ($scenario) {
+            'new_customer_onboarding' => $this->state([
+                'name' => 'New Customer Corp',
+                'status' => 'pending_verification',
+                'created_at' => now(),
+                'source' => 'registration_form',
+            ]),
+            'enterprise_client' => $this->state([
+                'name' => $this->faker->company . ' Enterprise',
+                'status' => 'active',
+                'tier' => 'enterprise',
+                'annual_revenue' => $this->faker->numberBetween(1000000, 100000000),
+            ]),
+            'legacy_migration' => $this->state([
+                'name' => 'Legacy ' . $this->faker->company,
+                'status' => 'migrated',
+                'legacy_id' => $this->faker->numberBetween(1000, 9999),
+                'migrated_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            ]),
+            default => $this,
+        };
+    }
+}

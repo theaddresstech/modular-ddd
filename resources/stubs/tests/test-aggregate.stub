@@ -1,0 +1,259 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Unit\Aggregates;
+
+use {{ aggregateNamespace }};
+use {{ testNamespace }}\TestCase;
+use {{ testNamespace }}\Factories\{{ aggregate }}Factory;
+use LaravelModularDDD\Testing\Assertions\DomainAssertions;
+use LaravelModularDDD\Testing\Assertions\AggregateAssertions;
+use LaravelModularDDD\Testing\Traits\GeneratesTestData;
+
+/**
+ * {{ aggregate }}Test
+ *
+ * Unit tests for {{ aggregate }} aggregate root.
+ * Tests business logic, invariants, and domain events.
+ *
+ * @group {{ module }}
+ * @group aggregates
+ * @group unit
+ */
+final class {{ aggregate }}Test extends TestCase
+{
+    use DomainAssertions;
+    use AggregateAssertions;
+    use GeneratesTestData;
+
+    /**
+     * @test
+     */
+    public function it_can_be_created_with_valid_data(): void
+    {
+        // Arrange
+        $data = {{ aggregate }}Factory::make()->toArray();
+
+        // Act
+        $aggregate = {{ aggregate }}::create(
+            $data['id'],
+            $data['name'],
+            $data['description']
+        );
+
+        // Assert
+        $this->assertAggregateCreated($aggregate);
+        $this->assertAggregateHasEvents($aggregate, [
+            {{ aggregate }}Created::class
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_maintains_aggregate_invariants(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Act & Assert
+        $this->assertAggregateInvariants($aggregate, [
+            'hasValidName' => fn($agg) => !empty($agg->getName()),
+            'hasValidId' => fn($agg) => $agg->getId() !== null,
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_update_its_properties(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+        $newName = $this->generateName();
+        $initialVersion = $aggregate->getVersion();
+
+        // Act
+        $aggregate->updateName($newName);
+
+        // Assert
+        $this->assertEquals($newName, $aggregate->getName());
+        $this->assertAggregateModified($aggregate, $initialVersion + 1);
+        $this->assertAggregateHasEvent($aggregate, {{ aggregate }}NameUpdated::class);
+    }
+
+    /**
+     * @test
+     */
+    public function it_validates_business_rules_on_creation(): void
+    {
+        // Arrange
+        $invalidData = [
+            'id' => '',
+            'name' => '',
+            'description' => 'Valid description'
+        ];
+
+        // Act & Assert
+        $this->assertInvariantViolated(
+            fn() => {{ aggregate }}::create($invalidData['id'], $invalidData['name'], $invalidData['description']),
+            \InvalidArgumentException::class,
+            'Should not allow creation with empty name'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_prevents_invalid_state_changes(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Act & Assert
+        $this->assertInvariantViolated(
+            fn() => $aggregate->updateName(''),
+            \InvalidArgumentException::class,
+            'Should not allow empty name updates'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_be_marked_as_deleted(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Act
+        $aggregate->markAsDeleted();
+
+        // Assert
+        $this->assertTrue($aggregate->isDeleted());
+        $this->assertAggregateHasEvent($aggregate, {{ aggregate }}Deleted::class);
+    }
+
+    /**
+     * @test
+     */
+    public function it_prevents_operations_when_deleted(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+        $aggregate->markAsDeleted();
+
+        // Act & Assert
+        $this->assertInvariantViolated(
+            fn() => $aggregate->updateName('New Name'),
+            \DomainException::class,
+            'Should not allow operations on deleted aggregates'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_produces_events_in_correct_order(): void
+    {
+        // Arrange
+        $data = {{ aggregate }}Factory::make()->toArray();
+
+        // Act
+        $aggregate = {{ aggregate }}::create($data['id'], $data['name'], $data['description']);
+        $aggregate->updateName('Updated Name');
+        $aggregate->markAsDeleted();
+
+        // Assert
+        $this->assertEventsDispatchedInOrder([
+            {{ aggregate }}Created::class,
+            {{ aggregate }}NameUpdated::class,
+            {{ aggregate }}Deleted::class
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_be_reconstructed_from_events(): void
+    {
+        // Arrange
+        $events = [
+            new {{ aggregate }}Created($this->generateId(), 'Test Name', 'Test Description'),
+            new {{ aggregate }}NameUpdated($this->generateId(), 'Updated Name'),
+        ];
+
+        // Act & Assert
+        $this->assertAggregateCanBeReconstructed({{ aggregate }}::class, $events);
+    }
+
+    /**
+     * @test
+     */
+    public function it_maintains_version_consistency(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+        $initialVersion = $aggregate->getVersion();
+
+        // Act
+        $aggregate->updateName('New Name');
+        $aggregate->updateDescription('New Description');
+
+        // Assert
+        $this->assertEquals($initialVersion + 2, $aggregate->getVersion());
+        $this->assertAggregateEventCount($aggregate, 2);
+    }
+
+    /**
+     * @test
+     */
+    public function it_enforces_consistency_boundaries(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Act & Assert
+        $this->assertConsistencyBoundary($aggregate, function ($agg) {
+            $agg->updateName('New Name');
+            $agg->updateDescription('New Description');
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_snapshot_creation(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Act & Assert
+        $this->assertAggregateSnapshotting($aggregate);
+    }
+
+    /**
+     * @test
+     */
+    public function it_validates_complex_business_scenarios(): void
+    {
+        // Arrange
+        $aggregate = {{ aggregate }}Factory::make();
+
+        // Business Scenario: Complex workflow
+        // Act
+        $aggregate->updateName('Updated Name');
+        $aggregate->updateDescription('Updated Description');
+        $aggregate->activate();
+
+        // Assert
+        $this->assertTrue($aggregate->isActive());
+        $this->assertAggregateEventCount($aggregate, 3);
+        $this->assertAggregateHasEvents($aggregate, [
+            {{ aggregate }}NameUpdated::class,
+            {{ aggregate }}DescriptionUpdated::class,
+            {{ aggregate }}Activated::class
+        ]);
+    }
+}

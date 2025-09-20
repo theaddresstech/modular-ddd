@@ -1,0 +1,353 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Unit\Commands;
+
+use {{ commandNamespace }};
+use {{ handlerNamespace }};
+use {{ testNamespace }}\TestCase;
+use {{ testNamespace }}\Factories\{{ aggregate }}Factory;
+use LaravelModularDDD\Testing\Assertions\DomainAssertions;
+use LaravelModularDDD\Testing\Traits\TestsCommands;
+use LaravelModularDDD\Testing\Traits\MocksRepositories;
+use LaravelModularDDD\Testing\Traits\GeneratesTestData;
+
+/**
+ * {{ command }}HandlerTest
+ *
+ * Unit tests for {{ command }} command handler.
+ * Tests command execution, validation, and side effects.
+ *
+ * @group {{ module }}
+ * @group commands
+ * @group unit
+ */
+final class {{ command }}HandlerTest extends TestCase
+{
+    use DomainAssertions;
+    use TestsCommands;
+    use MocksRepositories;
+    use GeneratesTestData;
+
+    private {{ command }}Handler $handler;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->handler = $this->app->make({{ command }}Handler::class);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_valid_command_successfully(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandExecutesSuccessfully($command);
+    }
+
+    /**
+     * @test
+     */
+    public function it_validates_command_before_execution(): void
+    {
+        // Arrange - Valid command
+        $validCommand = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        // Act & Assert
+        $this->assertCommandValidation($validCommand, true);
+
+        // Arrange - Invalid command
+        $invalidCommand = new {{ command }}(
+            '', // Invalid ID
+            '', // Invalid name
+            'Valid description'
+        );
+
+        // Act & Assert
+        $this->assertCommandValidation($invalidCommand, false, [
+            'id cannot be empty',
+            'name cannot be empty'
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_produces_expected_domain_events(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandProducesEvents($command, [
+            {{ aggregate }}Created::class
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_fails_when_aggregate_already_exists(): void
+    {
+        // Arrange
+        $existingAggregate = {{ aggregate }}Factory::make();
+        $command = new {{ command }}(
+            $existingAggregate->getId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class, [$existingAggregate]);
+
+        // Act & Assert
+        $this->assertCommandFails(
+            $command,
+            \DomainException::class,
+            'already exists'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_repository_failures_gracefully(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->repositoryThrows(
+            {{ aggregate }}Repository::class,
+            'save',
+            new \RuntimeException('Database connection failed')
+        );
+
+        // Act & Assert
+        $this->assertCommandFails(
+            $command,
+            \RuntimeException::class,
+            'Database connection failed'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_executes_within_performance_limits(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert - Should execute within 100ms
+        $this->assertCommandExecutionTime($command, 0.1);
+    }
+
+    /**
+     * @test
+     */
+    public function it_maintains_transactional_consistency(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $exception = new \RuntimeException('Simulated failure');
+
+        // Act & Assert
+        $this->assertCommandTransactionRollback($command, $exception);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_concurrent_executions(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandConcurrency($command, 3);
+    }
+
+    /**
+     * @test
+     */
+    public function it_respects_authorization_rules(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $authorizedUser = User::factory()->create(['role' => 'admin']);
+        $unauthorizedUser = User::factory()->create(['role' => 'guest']);
+
+        // Act & Assert
+        $this->assertCommandAuthorization($command, $authorizedUser, true);
+        $this->assertCommandAuthorization($command, $unauthorizedUser, false);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_various_input_scenarios(): void
+    {
+        $scenarios = [
+            'successful_creation' => [
+                'data' => [
+                    'id' => $this->generateId(),
+                    'name' => 'Valid Name',
+                    'description' => 'Valid Description'
+                ],
+                'should_succeed' => true,
+                'expected_events' => [{{ aggregate }}Created::class]
+            ],
+            'empty_name_failure' => [
+                'data' => [
+                    'id' => $this->generateId(),
+                    'name' => '',
+                    'description' => 'Valid Description'
+                ],
+                'should_succeed' => false,
+                'expected_exception' => \InvalidArgumentException::class
+            ],
+            'null_id_failure' => [
+                'data' => [
+                    'id' => null,
+                    'name' => 'Valid Name',
+                    'description' => 'Valid Description'
+                ],
+                'should_succeed' => false,
+                'expected_exception' => \InvalidArgumentException::class
+            ]
+        ];
+
+        // Act & Assert
+        $this->assertCommandScenarios({{ command }}::class, $scenarios);
+    }
+
+    /**
+     * @test
+     */
+    public function it_produces_expected_side_effects(): void
+    {
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandSideEffects($command, [
+            'aggregate_saved' => true,
+            'events_dispatched' => 1,
+            'cache_cleared' => true
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_is_idempotent_when_expected(): void
+    {
+        // Note: Only test this if the command is designed to be idempotent
+        $this->markTestSkipped('This command is not idempotent by design');
+
+        // Arrange
+        $command = new {{ command }}(
+            $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandIdempotency($command, 3);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_business_rule_violations(): void
+    {
+        // Arrange - Command that violates business rules
+        $command = new {{ command }}(
+            $this->generateId(),
+            'InvalidName!@#', // Name with special characters
+            $this->generateDescription()
+        );
+
+        // Act & Assert
+        $this->assertCommandFails(
+            $command,
+            \DomainException::class,
+            'business rule violation'
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_be_compensated(): void
+    {
+        // Arrange
+        $createCommand = new {{ command }}(
+            $id = $this->generateId(),
+            $this->generateName(),
+            $this->generateDescription()
+        );
+
+        $deleteCommand = new Delete{{ aggregate }}Command($id);
+
+        $this->mockAggregateRepository({{ aggregate }}Repository::class);
+
+        // Act & Assert
+        $this->assertCommandCompensation($createCommand, $deleteCommand);
+    }
+}

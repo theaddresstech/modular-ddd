@@ -1,0 +1,209 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Seeder;
+use Modules\{{ module }}\Infrastructure\Persistence\Eloquent\{{ aggregate }}ReadModel;
+use Modules\{{ module }}\Database\Factories\{{ aggregate }}ReadModelFactory;
+
+/**
+ * {{ class }}
+ *
+ * Seeder for {{ module }} module test data.
+ * Creates realistic sample data for development and testing.
+ */
+final class {{ class }} extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        $this->command->info('Seeding {{ module }} module data...');
+
+        // Create different categories of test data
+        $this->createBasicData();
+        $this->createVariedStatusData();
+        $this->createPerformanceTestData();
+        $this->createRealisticScenarios();
+
+        $this->command->info('{{ module }} module seeding completed.');
+    }
+
+    /**
+     * Create basic {{ aggregate_lower }} test data.
+     */
+    private function createBasicData(): void
+    {
+        $this->command->info('  Creating basic {{ aggregate_lower }} data...');
+
+        // Create active {{ aggregate_lower }}s with standard data
+        {{ aggregate }}ReadModel::factory()
+            ->count(10)
+            ->active()
+            ->create();
+
+        // Create some with detailed information
+        {{ aggregate }}ReadModel::factory()
+            ->count(5)
+            ->detailed()
+            ->active()
+            ->create();
+
+        // Create some with minimal information
+        {{ aggregate }}ReadModel::factory()
+            ->count(3)
+            ->minimal()
+            ->active()
+            ->create();
+    }
+
+    /**
+     * Create {{ aggregate_lower }}s with different statuses.
+     */
+    private function createVariedStatusData(): void
+    {
+        $this->command->info('  Creating {{ aggregate_lower }}s with varied statuses...');
+
+        // Create deleted {{ aggregate_lower }}s
+        {{ aggregate }}ReadModel::factory()
+            ->count(5)
+            ->deleted()
+            ->create();
+
+        // Create mix of old and recent
+        {{ aggregate }}ReadModel::factory()
+            ->count(8)
+            ->old()
+            ->active()
+            ->create();
+
+        {{ aggregate }}ReadModel::factory()
+            ->count(12)
+            ->recent()
+            ->active()
+            ->create();
+    }
+
+    /**
+     * Create data for performance testing.
+     */
+    private function createPerformanceTestData(): void
+    {
+        if (!app()->environment(['local', 'testing'])) {
+            return;
+        }
+
+        $this->command->info('  Creating performance test data...');
+
+        // Create large dataset for performance testing
+        {{ aggregate }}ReadModel::factory()
+            ->count(1000)
+            ->performance()
+            ->create();
+    }
+
+    /**
+     * Create realistic business scenarios.
+     */
+    private function createRealisticScenarios(): void
+    {
+        $this->command->info('  Creating realistic business scenarios...');
+
+        // Scenario 1: Company departments
+        $departments = [
+            'Human Resources',
+            'Information Technology',
+            'Marketing',
+            'Sales',
+            'Finance',
+            'Operations',
+            'Research and Development',
+            'Customer Service',
+        ];
+
+        foreach ($departments as $department) {
+            {{ aggregate }}ReadModel::factory()
+                ->withName($department)
+                ->withDescription("The {$department} department handles various business operations and responsibilities.")
+                ->active()
+                ->create();
+        }
+
+        // Scenario 2: Project categories
+        $projects = [
+            'Website Redesign' => 'Complete overhaul of the company website with modern design and improved UX.',
+            'Mobile App Development' => 'Development of native mobile applications for iOS and Android platforms.',
+            'Database Migration' => 'Migration of legacy database systems to modern cloud-based solutions.',
+            'Security Audit' => 'Comprehensive security assessment and implementation of security improvements.',
+            'Process Automation' => 'Automation of manual business processes to improve efficiency.',
+        ];
+
+        foreach ($projects as $name => $description) {
+            {{ aggregate }}ReadModel::factory()
+                ->withName($name)
+                ->withDescription($description)
+                ->active()
+                ->recent()
+                ->create();
+        }
+
+        // Scenario 3: Archived/Legacy items
+        $legacyItems = [
+            'Legacy System Alpha' => 'Old system that has been replaced by modern solutions.',
+            'Deprecated Process Beta' => 'Business process that is no longer in use.',
+            'Obsolete Integration Gamma' => 'Third-party integration that has been discontinued.',
+        ];
+
+        foreach ($legacyItems as $name => $description) {
+            {{ aggregate }}ReadModel::factory()
+                ->withName($name)
+                ->withDescription($description)
+                ->deleted()
+                ->old()
+                ->create();
+        }
+
+        // Scenario 4: Version testing data
+        for ($version = 1; $version <= 10; $version++) {
+            {{ aggregate }}ReadModel::factory()
+                ->withName("Version Test Item {$version}")
+                ->withDescription("Test item for version {$version} testing scenarios.")
+                ->withVersion($version)
+                ->active()
+                ->create();
+        }
+    }
+
+    /**
+     * Create demonstration data for specific environments.
+     */
+    public function createDemoData(): void
+    {
+        if (!app()->environment(['demo', 'staging'])) {
+            return;
+        }
+
+        $this->command->info('Creating demonstration data...');
+
+        // Create polished demo data
+        $demoItems = [
+            'Customer Onboarding' => 'Streamlined process for bringing new customers into our platform with automated workflows and personalized experiences.',
+            'Inventory Management' => 'Advanced inventory tracking system with real-time updates, automated reordering, and comprehensive reporting.',
+            'Quality Assurance' => 'Robust quality control processes ensuring all products and services meet our high standards before delivery.',
+            'Data Analytics' => 'Comprehensive analytics platform providing insights into business performance and customer behavior patterns.',
+            'Content Management' => 'Centralized system for creating, managing, and distributing content across all business channels.',
+        ];
+
+        foreach ($demoItems as $name => $description) {
+            {{ aggregate }}ReadModel::factory()
+                ->withName($name)
+                ->withDescription($description)
+                ->active()
+                ->recent()
+                ->create();
+        }
+    }
+}

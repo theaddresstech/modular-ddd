@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Modules\{{ module }}\Domain\Models\{{ aggregate }};
+use Modules\{{ module }}\Domain\ValueObjects\{{ id_class }};
+{{#if with_specifications}}use LaravelModularDDD\Core\Domain\Specification;{{/if}}
+
+/**
+ * {{ class }}
+ *
+ * Repository contract for {{ aggregate }} aggregate.
+ * Defines the persistence interface for the domain layer.
+ */
+interface {{ class }}
+{
+    /**
+     * Save aggregate to storage
+     */
+    public function save({{ aggregate }} ${{ aggregate_lower }}): void;
+
+    /**
+     * Find aggregate by ID
+     */
+    public function findById({{ id_class }} $id): ?{{ aggregate }};
+
+    /**
+     * Get aggregate by ID (throws exception if not found)
+     */
+    public function getById({{ id_class }} $id): {{ aggregate }};
+
+    /**
+     * Check if aggregate exists
+     */
+    public function exists({{ id_class }} $id): bool;
+
+    /**
+     * Delete aggregate
+     */
+    public function delete({{ id_class }} $id): void;
+
+    /**
+     * Find all aggregates
+     *
+     * @return {{ aggregate }}[]
+     */
+    public function findAll(): array;
+
+    {{#if with_specifications}}
+    /**
+     * Find aggregates by specification
+     *
+     * @return {{ aggregate }}[]
+     */
+    public function findBySpecification(Specification $specification): array;
+
+    /**
+     * Count aggregates by specification
+     */
+    public function countBySpecification(Specification $specification): int;
+    {{/if}}
+
+    /**
+     * Get next available ID
+     */
+    public function nextIdentity(): {{ id_class }};
+}

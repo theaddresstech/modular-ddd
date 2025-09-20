@@ -1,0 +1,210 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Route;
+use LaravelModularDDD\CQRS\Contracts\CommandBusInterface;
+use LaravelModularDDD\CQRS\Contracts\QueryBusInterface;
+use Modules\{{ module }}\Domain\Repositories\{{ aggregate }}RepositoryInterface;
+use Modules\{{ module }}\Infrastructure\Persistence\EventStore\EventSourced{{ aggregate }}Repository;
+
+/**
+ * {{ class }}
+ *
+ * Service provider for {{ module }} module.
+ * Registers all module dependencies and configuration.
+ */
+final class {{ class }} extends ServiceProvider
+{
+    /**
+     * Register module services
+     */
+    public function register(): void
+    {
+        $this->registerConfig();
+        $this->registerRepositories();
+        $this->registerCommandHandlers();
+        $this->registerQueryHandlers();
+        $this->registerServices();
+    }
+
+    /**
+     * Boot module services
+     */
+    public function boot(): void
+    {
+        $this->bootRoutes();
+        $this->bootMigrations();
+        $this->bootViews();
+        $this->bootTranslations();
+    }
+
+    /**
+     * Register module configuration
+     */
+    private function registerConfig(): void
+    {
+        $configPath = __DIR__ . '/../Config/config.php';
+
+        if (file_exists($configPath)) {
+            $this->mergeConfigFrom($configPath, '{{ module_lower }}');
+        }
+    }
+
+    /**
+     * Register repositories
+     */
+    private function registerRepositories(): void
+    {
+        $this->app->bind(
+            {{ aggregate }}RepositoryInterface::class,
+            EventSourced{{ aggregate }}Repository::class
+        );
+    }
+
+    /**
+     * Register command handlers
+     */
+    private function registerCommandHandlers(): void
+    {
+        $commandBus = $this->app->make(CommandBusInterface::class);
+
+        // Register Create{{ aggregate }} command handler
+        $commandBus->registerHandler(
+            $this->app->make(\Modules\{{ module }}\Application\Commands\Create{{ aggregate }}\Create{{ aggregate }}Handler::class)
+        );
+
+        // Register Update{{ aggregate }} command handler
+        $commandBus->registerHandler(
+            $this->app->make(\Modules\{{ module }}\Application\Commands\Update{{ aggregate }}\Update{{ aggregate }}Handler::class)
+        );
+
+        // Register Delete{{ aggregate }} command handler
+        $commandBus->registerHandler(
+            $this->app->make(\Modules\{{ module }}\Application\Commands\Delete{{ aggregate }}\Delete{{ aggregate }}Handler::class)
+        );
+    }
+
+    /**
+     * Register query handlers
+     */
+    private function registerQueryHandlers(): void
+    {
+        $queryBus = $this->app->make(QueryBusInterface::class);
+
+        // Register Get{{ aggregate }} query handler
+        $queryBus->registerHandler(
+            $this->app->make(\Modules\{{ module }}\Application\Queries\Get{{ aggregate }}\Get{{ aggregate }}Handler::class)
+        );
+
+        // Register List{{ aggregate }} query handler
+        $queryBus->registerHandler(
+            $this->app->make(\Modules\{{ module }}\Application\Queries\List{{ aggregate }}\List{{ aggregate }}Handler::class)
+        );
+    }
+
+    /**
+     * Register domain and application services
+     */
+    private function registerServices(): void
+    {
+        // Register any domain or application services here
+    }
+
+    /**
+     * Boot routes
+     */
+    private function bootRoutes(): void
+    {
+        {{#if with_api}}
+        $this->loadApiRoutes();
+        {{/if}}
+
+        {{#if with_web}}
+        $this->loadWebRoutes();
+        {{/if}}
+    }
+
+    {{#if with_api}}
+    /**
+     * Load API routes
+     */
+    private function loadApiRoutes(): void
+    {
+        $apiRoutesPath = __DIR__ . '/../Routes/api.php';
+
+        if (file_exists($apiRoutesPath)) {
+            Route::middleware('api')
+                ->prefix('api/{{ module_lower }}')
+                ->name('{{ module_lower }}.')
+                ->group($apiRoutesPath);
+        }
+    }
+    {{/if}}
+
+    {{#if with_web}}
+    /**
+     * Load web routes
+     */
+    private function loadWebRoutes(): void
+    {
+        $webRoutesPath = __DIR__ . '/../Routes/web.php';
+
+        if (file_exists($webRoutesPath)) {
+            Route::middleware('web')
+                ->prefix('{{ module_lower }}')
+                ->name('{{ module_lower }}.')
+                ->group($webRoutesPath);
+        }
+    }
+    {{/if}}
+
+    /**
+     * Boot migrations
+     */
+    private function bootMigrations(): void
+    {
+        $migrationsPath = __DIR__ . '/../Database/Migrations';
+
+        if (is_dir($migrationsPath)) {
+            $this->loadMigrationsFrom($migrationsPath);
+        }
+    }
+
+    /**
+     * Boot views
+     */
+    private function bootViews(): void
+    {
+        $viewsPath = __DIR__ . '/../Resources/views';
+
+        if (is_dir($viewsPath)) {
+            $this->loadViewsFrom($viewsPath, '{{ module_lower }}');
+        }
+    }
+
+    /**
+     * Boot translations
+     */
+    private function bootTranslations(): void
+    {
+        $translationsPath = __DIR__ . '/../Resources/lang';
+
+        if (is_dir($translationsPath)) {
+            $this->loadTranslationsFrom($translationsPath, '{{ module_lower }}');
+        }
+    }
+
+    /**
+     * Get the services provided by the provider
+     */
+    public function provides(): array
+    {
+        return [
+            {{ aggregate }}RepositoryInterface::class,
+        ];
+    }
+}

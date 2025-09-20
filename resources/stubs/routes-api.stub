@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Modules\{{ module }}\Presentation\Http\Controllers\{{ aggregate }}Controller;
+
+/*
+|--------------------------------------------------------------------------
+| {{ module }} API Routes
+|--------------------------------------------------------------------------
+|
+| RESTful API routes for {{ module }} module.
+| All routes are automatically prefixed with /api/{{ module_lower }}
+|
+*/
+
+Route::apiResource('{{ aggregate_lower }}', {{ aggregate }}Controller::class)
+    ->names([
+        'index' => '{{ module_lower }}.{{ aggregate_lower }}.index',
+        'store' => '{{ module_lower }}.{{ aggregate_lower }}.store',
+        'show' => '{{ module_lower }}.{{ aggregate_lower }}.show',
+        'update' => '{{ module_lower }}.{{ aggregate_lower }}.update',
+        'destroy' => '{{ module_lower }}.{{ aggregate_lower }}.destroy',
+    ]);
+
+// Additional custom routes
+Route::prefix('{{ aggregate_lower }}')->name('{{ module_lower }}.{{ aggregate_lower }}.')->group(function () {
+    // Add custom API endpoints here
+    // Example:
+    // Route::get('{id}/history', [{{ aggregate }}Controller::class, 'history'])->name('history');
+    // Route::post('{id}/restore', [{{ aggregate }}Controller::class, 'restore'])->name('restore');
+});

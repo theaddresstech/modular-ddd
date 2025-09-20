@@ -1,0 +1,129 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use LaravelModularDDD\CQRS\Contracts\CommandBusInterface;
+use LaravelModularDDD\CQRS\Contracts\QueryBusInterface;
+use Modules\{{ module }}\Application\Commands\Create{{ aggregate }}\Create{{ aggregate }}Command;
+use Modules\{{ module }}\Application\Commands\Update{{ aggregate }}\Update{{ aggregate }}Command;
+use Modules\{{ module }}\Application\Commands\Delete{{ aggregate }}\Delete{{ aggregate }}Command;
+use Modules\{{ module }}\Application\Queries\Get{{ aggregate }}\Get{{ aggregate }}Query;
+use Modules\{{ module }}\Application\Queries\List{{ aggregate }}\List{{ aggregate }}Query;
+use Modules\{{ module }}\Presentation\Http\Requests\Store{{ aggregate }}Request;
+use Modules\{{ module }}\Presentation\Http\Requests\Update{{ aggregate }}Request;
+use Modules\{{ module }}\Presentation\Http\Resources\{{ aggregate }}Resource;
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
+
+/**
+ * {{ class }}
+ *
+ * RESTful controller for {{ aggregate }} resources.
+ * {{#if with_api}}Provides JSON API endpoints.{{/if}}
+ * {{#if with_web}}Provides web interface.{{/if}}
+ */
+final class {{ class }}
+{
+    public function __construct(
+        private readonly CommandBusInterface $commandBus,
+        private readonly QueryBusInterface $queryBus
+    ) {}
+
+    /**
+     * Display a listing of {{ aggregate_lower }}s
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = new List{{ aggregate }}Query(
+            page: (int) $request->get('page', 1),
+            perPage: (int) $request->get('per_page', 15),
+            search: $request->get('search'),
+            sortBy: $request->get('sort_by'),
+            sortDirection: $request->get('sort_direction', 'desc')
+        );
+
+        $result = $this->queryBus->dispatch($query);
+
+        return response()->json([
+            'data' => $result['data'],
+            'pagination' => $result['pagination'] ?? null,
+        ]);
+    }
+
+    /**
+     * Store a newly created {{ aggregate_lower }}
+     */
+    public function store(Store{{ aggregate }}Request $request): JsonResponse
+    {
+        $command = new Create{{ aggregate }}Command(
+            name: $request->validated('name'),
+            description: $request->validated('description')
+        );
+
+        $id = $this->commandBus->dispatch($command);
+
+        return response()->json([
+            'message' => '{{ aggregate }} created successfully',
+            'data' => [
+                'id' => $id->toString(),
+            ],
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Display the specified {{ aggregate_lower }}
+     */
+    public function show(string $id): JsonResponse
+    {
+        $query = new Get{{ aggregate }}Query(id: $id);
+        $result = $this->queryBus->dispatch($query);
+
+        if (!$result) {
+            return response()->json([
+                'message' => '{{ aggregate }} not found',
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json([
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Update the specified {{ aggregate_lower }}
+     */
+    public function update(Update{{ aggregate }}Request $request, string $id): JsonResponse
+    {
+        $command = new Update{{ aggregate }}Command(
+            id: {{ aggregate }}Id::fromString($id),
+            name: $request->validated('name'),
+            description: $request->validated('description')
+        );
+
+        $this->commandBus->dispatch($command);
+
+        return response()->json([
+            'message' => '{{ aggregate }} updated successfully',
+        ]);
+    }
+
+    /**
+     * Remove the specified {{ aggregate_lower }}
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $command = new Delete{{ aggregate }}Command(
+            id: {{ aggregate }}Id::fromString($id)
+        );
+
+        $this->commandBus->dispatch($command);
+
+        return response()->json([
+            'message' => '{{ aggregate }} deleted successfully',
+        ]);
+    }
+}

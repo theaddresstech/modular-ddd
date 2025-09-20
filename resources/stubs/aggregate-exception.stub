@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
+use DomainException;
+
+/**
+ * {{ class }}
+ *
+ * Domain exception for {{ aggregate }} business rule violations.
+ * Encapsulates all possible error conditions for the {{ aggregate_lower }} aggregate.
+ */
+final class {{ class }} extends DomainException
+{
+    /**
+     * {{ aggregate }} not found
+     */
+    public static function notFound({{ aggregate }}Id $id): self
+    {
+        return new self("{{ aggregate }} with ID {$id->toString()} was not found.");
+    }
+
+    /**
+     * {{ aggregate }} already exists
+     */
+    public static function alreadyExists({{ aggregate }}Id $id): self
+    {
+        return new self("{{ aggregate }} with ID {$id->toString()} already exists.");
+    }
+
+    /**
+     * Cannot update deleted {{ aggregate_lower }}
+     */
+    public static function cannotUpdateDeleted({{ aggregate }}Id $id): self
+    {
+        return new self("Cannot update {{ aggregate_lower }} {$id->toString()} because it has been deleted.");
+    }
+
+    /**
+     * {{ aggregate }} already deleted
+     */
+    public static function alreadyDeleted({{ aggregate }}Id $id): self
+    {
+        return new self("{{ aggregate }} {$id->toString()} is already deleted.");
+    }
+
+    /**
+     * Name cannot be empty
+     */
+    public static function nameCannotBeEmpty(): self
+    {
+        return new self("{{ aggregate }} name cannot be empty.");
+    }
+
+    /**
+     * Name too long
+     */
+    public static function nameTooLong(): self
+    {
+        return new self("{{ aggregate }} name cannot exceed 255 characters.");
+    }
+
+    /**
+     * Invalid state transition
+     */
+    public static function invalidStateTransition(string $from, string $to): self
+    {
+        return new self("Invalid {{ aggregate_lower }} state transition from '{$from}' to '{$to}'.");
+    }
+
+    /**
+     * Business rule violation
+     */
+    public static function businessRuleViolation(string $rule, string $details = ''): self
+    {
+        $message = "{{ aggregate }} business rule violation: {$rule}";
+
+        if ($details) {
+            $message .= " - {$details}";
+        }
+
+        return new self($message);
+    }
+}

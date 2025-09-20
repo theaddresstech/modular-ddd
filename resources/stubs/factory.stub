@@ -1,0 +1,199 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Modules\{{ module }}\Infrastructure\Persistence\Eloquent\{{ aggregate }}ReadModel;
+use Ramsey\Uuid\Uuid;
+
+/**
+ * {{ class }}
+ *
+ * Factory for {{ aggregate }} read model testing data.
+ * Generates realistic test data for {{ aggregate_lower }} entities.
+ */
+final class {{ class }} extends Factory
+{
+    /**
+     * The name of the factory's corresponding model.
+     */
+    protected $model = {{ aggregate }}ReadModel::class;
+
+    /**
+     * Define the model's default state.
+     */
+    public function definition(): array
+    {
+        return [
+            'id' => Uuid::uuid4()->toString(),
+            'name' => $this->faker->words(2, true),
+            'description' => $this->faker->paragraph(),
+            'status' => 'active',
+            'version' => 1,
+            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'updated_at' => function (array $attributes) {
+                return $this->faker->dateTimeBetween($attributes['created_at'], 'now');
+            },
+            'deleted_at' => null,
+        ];
+    }
+
+    /**
+     * Indicate that the {{ aggregate_lower }} is deleted.
+     */
+    public function deleted(): static
+    {
+        return $this->state(function (array $attributes) {
+            $deletedAt = $this->faker->dateTimeBetween($attributes['updated_at'] ?? $attributes['created_at'], 'now');
+
+            return [
+                'status' => 'deleted',
+                'deleted_at' => $deletedAt,
+                'updated_at' => $deletedAt,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the {{ aggregate_lower }} is active.
+     */
+    public function active(): static
+    {
+        return $this->state([
+            'status' => 'active',
+            'deleted_at' => null,
+        ]);
+    }
+
+    /**
+     * Set a specific name for the {{ aggregate_lower }}.
+     */
+    public function withName(string $name): static
+    {
+        return $this->state([
+            'name' => $name,
+        ]);
+    }
+
+    /**
+     * Set a specific description for the {{ aggregate_lower }}.
+     */
+    public function withDescription(string $description): static
+    {
+        return $this->state([
+            'description' => $description,
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate_lower }} with specific version.
+     */
+    public function withVersion(int $version): static
+    {
+        return $this->state([
+            'version' => $version,
+        ]);
+    }
+
+    /**
+     * Create recent {{ aggregate_lower }} (within last month).
+     */
+    public function recent(): static
+    {
+        return $this->state(function (array $attributes) {
+            $createdAt = $this->faker->dateTimeBetween('-1 month', 'now');
+
+            return [
+                'created_at' => $createdAt,
+                'updated_at' => $this->faker->dateTimeBetween($createdAt, 'now'),
+            ];
+        });
+    }
+
+    /**
+     * Create old {{ aggregate_lower }} (older than 6 months).
+     */
+    public function old(): static
+    {
+        return $this->state(function (array $attributes) {
+            $createdAt = $this->faker->dateTimeBetween('-2 years', '-6 months');
+
+            return [
+                'created_at' => $createdAt,
+                'updated_at' => $this->faker->dateTimeBetween($createdAt, '-6 months'),
+            ];
+        });
+    }
+
+    /**
+     * Create {{ aggregate_lower }} with long name and description.
+     */
+    public function detailed(): static
+    {
+        return $this->state([
+            'name' => $this->faker->sentence(6),
+            'description' => $this->faker->paragraphs(3, true),
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate_lower }} with minimal data.
+     */
+    public function minimal(): static
+    {
+        return $this->state([
+            'name' => $this->faker->word(),
+            'description' => null,
+        ]);
+    }
+
+    /**
+     * Create {{ aggregate_lower }} for performance testing.
+     */
+    public function performance(): static
+    {
+        return $this->state([
+            'name' => 'Performance Test ' . $this->faker->randomNumber(6),
+            'description' => 'Generated for performance testing purposes',
+            'version' => $this->faker->numberBetween(1, 100),
+        ]);
+    }
+
+    /**
+     * Configure the model factory for seeding.
+     */
+    public function configure(): static
+    {
+        return $this->afterMaking(function ({{ aggregate }}ReadModel ${{ aggregate_lower }}) {
+            // Additional configuration for made models
+        })->afterCreating(function ({{ aggregate }}ReadModel ${{ aggregate_lower }}) {
+            // Additional setup for created models
+
+            // Example: Create related events for testing
+            if (app()->environment('testing')) {
+                // Create corresponding event stream entries
+                \DB::table('{{ module_lower }}_event_streams')->insert([
+                    'aggregate_id' => ${{ aggregate_lower }}->id,
+                    'aggregate_type' => '{{ aggregate }}',
+                    'version' => 1,
+                    'event_type' => '{{ aggregate }}Created',
+                    'event_data' => json_encode([
+                        'id' => ${{ aggregate_lower }}->id,
+                        'name' => ${{ aggregate_lower }}->name,
+                        'description' => ${{ aggregate_lower }}->description,
+                    ]),
+                    'metadata' => json_encode([
+                        'causation_id' => Uuid::uuid4()->toString(),
+                        'correlation_id' => Uuid::uuid4()->toString(),
+                        'user_id' => null,
+                    ]),
+                    'occurred_at' => ${{ aggregate_lower }}->created_at,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+    }
+}

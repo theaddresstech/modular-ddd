@@ -1,0 +1,190 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Modules\{{ module }}\Domain\Aggregates\{{ aggregate }};
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Created;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Updated;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Deleted;
+use Modules\{{ module }}\Domain\Exceptions\{{ aggregate }}Exception;
+use PHPUnit\Framework\TestCase;
+use Ramsey\Uuid\Uuid;
+
+/**
+ * {{ class }}
+ *
+ * Unit tests for {{ aggregate }} aggregate business logic.
+ * Tests domain rules, event emission, and state transitions.
+ */
+final class {{ class }} extends TestCase
+{
+    private {{ aggregate }}Id $aggregateId;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+    }
+
+    public function test_can_create_{{ aggregate_lower }}(): void
+    {
+        $name = 'Test {{ aggregate }}';
+        $description = 'Test description';
+
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            $name,
+            $description
+        );
+
+        $this->assertEquals($this->aggregateId, ${{ aggregate_lower }}->getId());
+        $this->assertEquals($name, ${{ aggregate_lower }}->getName());
+        $this->assertEquals($description, ${{ aggregate_lower }}->getDescription());
+        $this->assertFalse(${{ aggregate_lower }}->isDeleted());
+
+        $events = ${{ aggregate_lower }}->getUncommittedEvents();
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf({{ aggregate }}Created::class, $events[0]);
+    }
+
+    public function test_cannot_create_{{ aggregate_lower }}_with_empty_name(): void
+    {
+        $this->expectException({{ aggregate }}Exception::class);
+        $this->expectExceptionMessage('{{ aggregate }} name cannot be empty');
+
+        {{ aggregate }}::create(
+            $this->aggregateId,
+            '',
+            'Test description'
+        );
+    }
+
+    public function test_cannot_create_{{ aggregate_lower }}_with_long_name(): void
+    {
+        $this->expectException({{ aggregate }}Exception::class);
+        $this->expectExceptionMessage('{{ aggregate }} name cannot exceed 255 characters');
+
+        {{ aggregate }}::create(
+            $this->aggregateId,
+            str_repeat('a', 256),
+            'Test description'
+        );
+    }
+
+    public function test_can_update_{{ aggregate_lower }}(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Original Name',
+            'Original description'
+        );
+        ${{ aggregate_lower }}->markEventsAsCommitted();
+
+        $newName = 'Updated Name';
+        $newDescription = 'Updated description';
+
+        ${{ aggregate_lower }}->update($newName, $newDescription);
+
+        $this->assertEquals($newName, ${{ aggregate_lower }}->getName());
+        $this->assertEquals($newDescription, ${{ aggregate_lower }}->getDescription());
+
+        $events = ${{ aggregate_lower }}->getUncommittedEvents();
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf({{ aggregate }}Updated::class, $events[0]);
+    }
+
+    public function test_cannot_update_deleted_{{ aggregate_lower }}(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Test Name',
+            'Test description'
+        );
+        ${{ aggregate_lower }}->delete();
+
+        $this->expectException({{ aggregate }}Exception::class);
+        $this->expectExceptionMessage('Cannot update {{ aggregate_lower }}');
+
+        ${{ aggregate_lower }}->update('New Name', 'New description');
+    }
+
+    public function test_can_delete_{{ aggregate_lower }}(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Test Name',
+            'Test description'
+        );
+        ${{ aggregate_lower }}->markEventsAsCommitted();
+
+        ${{ aggregate_lower }}->delete();
+
+        $this->assertTrue(${{ aggregate_lower }}->isDeleted());
+
+        $events = ${{ aggregate_lower }}->getUncommittedEvents();
+        $this->assertCount(1, $events);
+        $this->assertInstanceOf({{ aggregate }}Deleted::class, $events[0]);
+    }
+
+    public function test_cannot_delete_already_deleted_{{ aggregate_lower }}(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Test Name',
+            'Test description'
+        );
+        ${{ aggregate_lower }}->delete();
+
+        $this->expectException({{ aggregate }}Exception::class);
+        $this->expectExceptionMessage('{{ aggregate }} .* is already deleted');
+
+        ${{ aggregate_lower }}->delete();
+    }
+
+    public function test_can_restore_deleted_{{ aggregate_lower }}(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Test Name',
+            'Test description'
+        );
+        ${{ aggregate_lower }}->delete();
+        ${{ aggregate_lower }}->markEventsAsCommitted();
+
+        ${{ aggregate_lower }}->restore();
+
+        $this->assertFalse(${{ aggregate_lower }}->isDeleted());
+    }
+
+    public function test_handles_business_rule_violations(): void
+    {
+        $this->expectException({{ aggregate }}Exception::class);
+        $this->expectExceptionMessage('business rule violation');
+
+        // Test specific business rule
+        {{ aggregate }}::create(
+            $this->aggregateId,
+            'invalid-name-format',
+            'Test description'
+        );
+    }
+
+    public function test_maintains_version_consistency(): void
+    {
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $this->aggregateId,
+            'Test Name',
+            'Test description'
+        );
+
+        $initialVersion = ${{ aggregate_lower }}->getVersion();
+        ${{ aggregate_lower }}->markEventsAsCommitted();
+
+        ${{ aggregate_lower }}->update('Updated Name', 'Updated description');
+
+        $this->assertEquals($initialVersion + 1, ${{ aggregate_lower }}->getVersion());
+    }
+}

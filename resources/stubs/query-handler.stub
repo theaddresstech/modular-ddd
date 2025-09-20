@@ -1,0 +1,76 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\CQRS\Contracts\QueryHandlerInterface;
+use Modules\{{ module }}\Infrastructure\ReadModels\{{ read_model }};
+{{#if with_caching}}use LaravelModularDDD\CQRS\Caching\MultiTierCacheManager;{{/if}}
+use {{ namespace }}\{{ query_class }};
+
+/**
+ * {{ class }}
+ *
+ * Handles {{ query }} query execution.
+ * {{#if with_caching}}Uses multi-tier caching for performance.{{/if}}
+ * {{#if with_pagination}}Supports pagination and filtering.{{/if}}
+ */
+final class {{ class }} implements QueryHandlerInterface
+{
+    public function __construct(
+        {{#if with_caching}}private readonly MultiTierCacheManager $cacheManager{{/if}}
+    ) {}
+
+    /**
+     * Handle the query
+     */
+    public function handle({{ query_class }} $query): mixed
+    {
+        {{#if with_caching}}
+        // Check cache first
+        if ($query->shouldCache()) {
+            $cached = $this->cacheManager->get($query);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        // Execute query
+        $result = $this->executeQuery($query);
+
+        // Cache result
+        if ($query->shouldCache()) {
+            $this->cacheManager->put($query, $result);
+        }
+
+        return $result;
+        {{else}}
+        return $this->executeQuery($query);
+        {{/if}}
+    }
+
+    /**
+     * Execute the actual query
+     */
+    private function executeQuery({{ query_class }} $query): mixed
+    {
+        {{ handle_logic }}
+    }
+
+    /**
+     * Get handled query type
+     */
+    public function getHandledQueryType(): string
+    {
+        return {{ query_class }}::class;
+    }
+
+    /**
+     * Get handler priority
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+}

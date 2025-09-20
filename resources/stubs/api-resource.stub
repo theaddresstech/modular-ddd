@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * {{ class }}
+ *
+ * API resource for {{ aggregate }} data transformation.
+ * Standardizes JSON response format and handles data serialization.
+ */
+final class {{ class }} extends JsonResource
+{
+    /**
+     * Transform the resource into an array
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+
+            // Add conditional fields
+            $this->mergeWhen($request->user()?->can('view-details'), [
+                'internal_notes' => $this->internal_notes,
+            ]),
+
+            // Add relationships when loaded
+            'relationships' => $this->when($this->relationLoaded('relationships'), function () {
+                return [
+                    // Add related resources here
+                ];
+            }),
+
+            // Add metadata
+            'meta' => [
+                'type' => '{{ aggregate_lower }}',
+                'version' => '1.0',
+            ],
+        ];
+    }
+
+    /**
+     * Get additional data that should be returned with the resource array
+     */
+    public function with(Request $request): array
+    {
+        return [
+            'links' => [
+                'self' => route('{{ module_lower }}.{{ aggregate_lower }}.show', $this->id),
+                'edit' => route('{{ module_lower }}.{{ aggregate_lower }}.edit', $this->id),
+                'delete' => route('{{ module_lower }}.{{ aggregate_lower }}.destroy', $this->id),
+            ],
+        ];
+    }
+}

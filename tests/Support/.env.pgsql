@@ -1,0 +1,42 @@
+APP_NAME="Laravel Modular DDD Tests"
+APP_ENV=testing
+APP_KEY=base64:2fl+Ktvkdg+yQKcKSFU3vqE3l5Z3w5xWjjW8RA4g7hI=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+LOG_CHANNEL=single
+LOG_LEVEL=debug
+
+# PostgreSQL Database Configuration
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=laravel_ddd_test
+DB_USERNAME=postgres
+DB_PASSWORD=
+
+# Cache Configuration (use Redis for testing)
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=array
+
+# Redis Configuration
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+REDIS_DB=3
+
+# Mail Configuration
+MAIL_MAILER=array
+
+# Modular DDD Configuration
+MODULAR_DDD_ENABLED=true
+MODULAR_DDD_EVENT_SOURCING_ENABLED=true
+MODULAR_DDD_CQRS_ENABLED=true
+MODULAR_DDD_MODULE_COMMUNICATION_ENABLED=true
+
+# Performance Testing
+PERFORMANCE_TESTING_ENABLED=true
+BENCHMARK_ITERATIONS=100
+STRESS_TEST_DURATION=30

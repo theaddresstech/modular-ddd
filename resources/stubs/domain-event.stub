@@ -1,0 +1,105 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\Core\Domain\DomainEvent;
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
+use Carbon\Carbon;
+
+/**
+ * {{ class }} Domain Event
+ *
+ * Represents that a {{ aggregate_lower }} has been {{ action }}d in the domain.
+ * Contains all necessary data for event handlers and projections.
+ */
+final class {{ class }} extends DomainEvent
+{
+    public function __construct(
+        private readonly {{ aggregate }}Id ${{ aggregate_lower }}Id,
+        {{#if name}}private readonly string $name,{{/if}}
+        {{#if description}}private readonly ?string $description,{{/if}}
+        Carbon $occurredAt
+    ) {
+        parent::__construct($occurredAt);
+    }
+
+    /**
+     * Get event type identifier
+     */
+    public function getEventType(): string
+    {
+        return '{{ module }}.{{ aggregate_lower }}.{{ action }}';
+    }
+
+    /**
+     * Get aggregate ID
+     */
+    public function getAggregateId(): string
+    {
+        return $this->{{ aggregate_lower }}Id->toString();
+    }
+
+    /**
+     * Get aggregate type
+     */
+    public function getAggregateType(): string
+    {
+        return '{{ module }}.{{ aggregate }}';
+    }
+
+    /**
+     * Get {{ aggregate_lower }} ID
+     */
+    public function getId(): {{ aggregate }}Id
+    {
+        return $this->{{ aggregate_lower }}Id;
+    }
+
+    {{#if name}}
+    /**
+     * Get name
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    {{/if}}
+
+    {{#if description}}
+    /**
+     * Get description
+     */
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+    {{/if}}
+
+    /**
+     * Serialize event data for storage
+     */
+    public function toArray(): array
+    {
+        return [
+            '{{ aggregate_lower }}_id' => $this->{{ aggregate_lower }}Id->toString(),
+            {{#if name}}'name' => $this->name,{{/if}}
+            {{#if description}}'description' => $this->description,{{/if}}
+            'occurred_at' => $this->occurredAt->toISOString(),
+        ];
+    }
+
+    /**
+     * Create from array data
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            {{ aggregate }}Id::fromString($data['{{ aggregate_lower }}_id']),
+            {{#if name}}$data['name'],{{/if}}
+            {{#if description}}$data['description'] ?? null,{{/if}}
+            Carbon::parse($data['occurred_at'])
+        );
+    }
+}

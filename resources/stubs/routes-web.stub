@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Modules\{{ module }}\Presentation\Http\Controllers\{{ aggregate }}Controller;
+
+/*
+|--------------------------------------------------------------------------
+| {{ module }} Web Routes
+|--------------------------------------------------------------------------
+|
+| Web interface routes for {{ module }} module.
+| All routes are automatically prefixed with /{{ module_lower }}
+|
+*/
+
+Route::resource('{{ aggregate_lower }}', {{ aggregate }}Controller::class)
+    ->names([
+        'index' => '{{ module_lower }}.{{ aggregate_lower }}.index',
+        'create' => '{{ module_lower }}.{{ aggregate_lower }}.create',
+        'store' => '{{ module_lower }}.{{ aggregate_lower }}.store',
+        'show' => '{{ module_lower }}.{{ aggregate_lower }}.show',
+        'edit' => '{{ module_lower }}.{{ aggregate_lower }}.edit',
+        'update' => '{{ module_lower }}.{{ aggregate_lower }}.update',
+        'destroy' => '{{ module_lower }}.{{ aggregate_lower }}.destroy',
+    ]);
+
+// Additional web routes
+Route::prefix('{{ aggregate_lower }}')->name('{{ module_lower }}.{{ aggregate_lower }}.')->group(function () {
+    // Add custom web routes here
+    // Example:
+    // Route::get('search', [{{ aggregate }}Controller::class, 'search'])->name('search');
+    // Route::get('export', [{{ aggregate }}Controller::class, 'export'])->name('export');
+});

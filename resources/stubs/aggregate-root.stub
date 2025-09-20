@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\Core\Domain\AggregateRoot;
+use LaravelModularDDD\Core\Domain\Contracts\DomainEventInterface;
+use Modules\{{ module }}\Domain\ValueObjects\{{ id_class }};
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Created;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Updated;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Deleted;
+use Modules\{{ module }}\Domain\Exceptions\{{ aggregate }}Exception;
+
+/**
+ * {{ aggregate }} Aggregate Root
+ *
+ * Represents the {{ aggregate_lower }} domain entity with event sourcing capabilities.
+ * Encapsulates business rules and maintains consistency boundaries.
+ */
+final class {{ class }} extends AggregateRoot
+{
+    private {{ id_class }} $id;
+    private string $name;
+    private ?string $description = null;
+    private bool $isDeleted = false;
+
+    /**
+     * Create new {{ aggregate_lower }}
+     */
+    public static function create(
+        {{ id_class }} $id,
+        string $name,
+        ?string $description = null
+    ): self {
+        ${{ aggregate_lower }} = new self();
+
+        {{#if with_validation}}
+        // Apply business rules
+        self::validateName($name);
+        {{/if}}
+
+        ${{ aggregate_lower }}->recordThat(new {{ aggregate }}Created(
+            $id,
+            $name,
+            $description,
+            now()
+        ));
+
+        return ${{ aggregate_lower }};
+    }
+
+    /**
+     * Update {{ aggregate_lower }} details
+     */
+    public function update(string $name, ?string $description = null): void
+    {
+        if ($this->isDeleted) {
+            throw {{ aggregate }}Exception::cannotUpdateDeleted($this->id);
+        }
+
+        {{#if with_validation}}
+        // Apply business rules
+        self::validateName($name);
+        {{/if}}
+
+        // Only record event if something actually changed
+        if ($this->name !== $name || $this->description !== $description) {
+            $this->recordThat(new {{ aggregate }}Updated(
+                $this->id,
+                $name,
+                $description,
+                now()
+            ));
+        }
+    }
+
+    /**
+     * Delete {{ aggregate_lower }}
+     */
+    public function delete(): void
+    {
+        if ($this->isDeleted) {
+            throw {{ aggregate }}Exception::alreadyDeleted($this->id);
+        }
+
+        $this->recordThat(new {{ aggregate }}Deleted(
+            $this->id,
+            now()
+        ));
+    }
+
+    /**
+     * Get aggregate ID
+     */
+    public function getId(): {{ id_class }}
+    {
+        return $this->id;
+    }
+
+    /**
+     * Get name
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Get description
+     */
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    /**
+     * Check if deleted
+     */
+    public function isDeleted(): bool
+    {
+        return $this->isDeleted;
+    }
+
+    /**
+     * Apply {{ aggregate }}Created event
+     */
+    protected function apply{{ aggregate }}Created({{ aggregate }}Created $event): void
+    {
+        $this->id = $event->getId();
+        $this->name = $event->getName();
+        $this->description = $event->getDescription();
+        $this->isDeleted = false;
+    }
+
+    /**
+     * Apply {{ aggregate }}Updated event
+     */
+    protected function apply{{ aggregate }}Updated({{ aggregate }}Updated $event): void
+    {
+        $this->name = $event->getName();
+        $this->description = $event->getDescription();
+    }
+
+    /**
+     * Apply {{ aggregate }}Deleted event
+     */
+    protected function apply{{ aggregate }}Deleted({{ aggregate }}Deleted $event): void
+    {
+        $this->isDeleted = true;
+    }
+
+    {{#if with_validation}}
+    /**
+     * Validate name business rule
+     */
+    private static function validateName(string $name): void
+    {
+        if (empty(trim($name))) {
+            throw {{ aggregate }}Exception::nameCannotBeEmpty();
+        }
+
+        if (strlen($name) > 255) {
+            throw {{ aggregate }}Exception::nameTooLong();
+        }
+    }
+    {{/if}}
+}

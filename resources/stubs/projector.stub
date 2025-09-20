@@ -1,0 +1,292 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Created;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Updated;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Deleted;
+use Modules\{{ module }}\Domain\Events\{{ aggregate }}Restored;
+use Modules\{{ module }}\Infrastructure\Persistence\Eloquent\{{ aggregate }}ReadModel;
+use Modules\Shared\Infrastructure\EventSourcing\Contracts\ProjectorInterface;
+use Modules\Shared\Infrastructure\EventSourcing\Contracts\DomainEventInterface;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * {{ class }}
+ *
+ * Projects {{ aggregate }} domain events into read model.
+ * Maintains denormalized view for query optimization.
+ */
+final class {{ class }} implements ProjectorInterface
+{
+    /**
+     * Get the projector name for tracking.
+     */
+    public function getName(): string
+    {
+        return '{{ module_lower }}.{{ aggregate_lower }}_projector';
+    }
+
+    /**
+     * Get the events this projector handles.
+     */
+    public function getHandledEvents(): array
+    {
+        return [
+            {{ aggregate }}Created::class,
+            {{ aggregate }}Updated::class,
+            {{ aggregate }}Deleted::class,
+            {{ aggregate }}Restored::class,
+        ];
+    }
+
+    /**
+     * Project the event into the read model.
+     */
+    public function project(DomainEventInterface $event): void
+    {
+        try {
+            match ($event::class) {
+                {{ aggregate }}Created::class => $this->handleCreated($event),
+                {{ aggregate }}Updated::class => $this->handleUpdated($event),
+                {{ aggregate }}Deleted::class => $this->handleDeleted($event),
+                {{ aggregate }}Restored::class => $this->handleRestored($event),
+                default => Log::warning("Unhandled event type in {{ class }}", [
+                    'event_type' => $event::class,
+                    'event_id' => $event->getEventId(),
+                ]),
+            };
+        } catch (\Exception $e) {
+            Log::error("Error projecting event in {{ class }}", [
+                'event_type' => $event::class,
+                'event_id' => $event->getEventId(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Handle {{ aggregate }}Created event.
+     */
+    private function handleCreated({{ aggregate }}Created $event): void
+    {
+        {{ aggregate }}ReadModel::create([
+            'id' => $event->getAggregateId(),
+            'name' => $event->getName(),
+            'description' => $event->getDescription(),
+            'status' => 'active',
+            'version' => 1,
+            'created_at' => $event->getOccurredAt(),
+            'updated_at' => $event->getOccurredAt(),
+        ]);
+
+        Log::info("{{ aggregate }} read model created", [
+            'aggregate_id' => $event->getAggregateId(),
+            'name' => $event->getName(),
+        ]);
+    }
+
+    /**
+     * Handle {{ aggregate }}Updated event.
+     */
+    private function handleUpdated({{ aggregate }}Updated $event): void
+    {
+        $readModel = {{ aggregate }}ReadModel::find($event->getAggregateId());
+
+        if (!$readModel) {
+            Log::warning("{{ aggregate }} read model not found for update", [
+                'aggregate_id' => $event->getAggregateId(),
+            ]);
+
+            // Create missing read model (recovery scenario)
+            $this->createMissingReadModel($event);
+            return;
+        }
+
+        $readModel->update([
+            'name' => $event->getName(),
+            'description' => $event->getDescription(),
+            'version' => $event->getAggregateVersion(),
+            'updated_at' => $event->getOccurredAt(),
+        ]);
+
+        Log::info("{{ aggregate }} read model updated", [
+            'aggregate_id' => $event->getAggregateId(),
+            'version' => $event->getAggregateVersion(),
+        ]);
+    }
+
+    /**
+     * Handle {{ aggregate }}Deleted event.
+     */
+    private function handleDeleted({{ aggregate }}Deleted $event): void
+    {
+        $readModel = {{ aggregate }}ReadModel::find($event->getAggregateId());
+
+        if (!$readModel) {
+            Log::warning("{{ aggregate }} read model not found for deletion", [
+                'aggregate_id' => $event->getAggregateId(),
+            ]);
+            return;
+        }
+
+        $readModel->update([
+            'status' => 'deleted',
+            'version' => $event->getAggregateVersion(),
+            'updated_at' => $event->getOccurredAt(),
+            'deleted_at' => $event->getOccurredAt(),
+        ]);
+
+        Log::info("{{ aggregate }} read model deleted", [
+            'aggregate_id' => $event->getAggregateId(),
+            'version' => $event->getAggregateVersion(),
+        ]);
+    }
+
+    /**
+     * Handle {{ aggregate }}Restored event.
+     */
+    private function handleRestored({{ aggregate }}Restored $event): void
+    {
+        $readModel = {{ aggregate }}ReadModel::withTrashed()->find($event->getAggregateId());
+
+        if (!$readModel) {
+            Log::warning("{{ aggregate }} read model not found for restoration", [
+                'aggregate_id' => $event->getAggregateId(),
+            ]);
+
+            // Create missing read model (recovery scenario)
+            $this->createMissingReadModel($event);
+            return;
+        }
+
+        $readModel->update([
+            'status' => 'active',
+            'version' => $event->getAggregateVersion(),
+            'updated_at' => $event->getOccurredAt(),
+            'deleted_at' => null,
+        ]);
+
+        Log::info("{{ aggregate }} read model restored", [
+            'aggregate_id' => $event->getAggregateId(),
+            'version' => $event->getAggregateVersion(),
+        ]);
+    }
+
+    /**
+     * Create missing read model for recovery scenarios.
+     */
+    private function createMissingReadModel(DomainEventInterface $event): void
+    {
+        Log::info("Creating missing {{ aggregate }} read model", [
+            'aggregate_id' => $event->getAggregateId(),
+            'event_type' => $event::class,
+        ]);
+
+        // Basic read model creation with available data
+        {{ aggregate }}ReadModel::create([
+            'id' => $event->getAggregateId(),
+            'name' => $event->getName() ?? 'Recovered {{ aggregate }}',
+            'description' => $event->getDescription() ?? 'Recovered from event stream',
+            'status' => match ($event::class) {
+                {{ aggregate }}Deleted::class => 'deleted',
+                default => 'active',
+            },
+            'version' => $event->getAggregateVersion(),
+            'created_at' => $event->getOccurredAt(),
+            'updated_at' => $event->getOccurredAt(),
+            'deleted_at' => $event instanceof {{ aggregate }}Deleted ? $event->getOccurredAt() : null,
+        ]);
+    }
+
+    /**
+     * Reset the projection (for rebuilding).
+     */
+    public function reset(): void
+    {
+        Log::info("Resetting {{ class }} projection");
+
+        {{ aggregate }}ReadModel::truncate();
+
+        Log::info("{{ class }} projection reset completed");
+    }
+
+    /**
+     * Get projection statistics.
+     */
+    public function getStatistics(): array
+    {
+        return [
+            'total_read_models' => {{ aggregate }}ReadModel::count(),
+            'active_read_models' => {{ aggregate }}ReadModel::active()->count(),
+            'deleted_read_models' => {{ aggregate }}ReadModel::deleted()->count(),
+            'last_projection_run' => $this->getLastProjectionRun(),
+        ];
+    }
+
+    /**
+     * Get the timestamp of the last projection run.
+     */
+    private function getLastProjectionRun(): ?string
+    {
+        $projection = \DB::table('{{ module_lower }}_projections')
+            ->where('name', $this->getName())
+            ->first();
+
+        return $projection?->last_processed_at;
+    }
+
+    /**
+     * Check if projection is healthy.
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Check if read model table exists and is accessible
+            {{ aggregate }}ReadModel::count();
+
+            // Check if projection tracking table is accessible
+            \DB::table('{{ module_lower }}_projections')
+                ->where('name', $this->getName())
+                ->exists();
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("{{ class }} health check failed", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Validate event data before projection.
+     */
+    private function validateEventData(DomainEventInterface $event): bool
+    {
+        // Basic validation
+        if (!$event->getAggregateId()) {
+            Log::error("Event missing aggregate ID", [
+                'event_type' => $event::class,
+                'event_id' => $event->getEventId(),
+            ]);
+            return false;
+        }
+
+        if (!$event->getOccurredAt()) {
+            Log::error("Event missing occurred_at timestamp", [
+                'event_type' => $event::class,
+                'event_id' => $event->getEventId(),
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+}

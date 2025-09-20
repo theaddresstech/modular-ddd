@@ -1,0 +1,362 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Unit\Queries;
+
+use {{ queryNamespace }};
+use {{ handlerNamespace }};
+use {{ testNamespace }}\TestCase;
+use {{ testNamespace }}\Factories\{{ aggregate }}Factory;
+use LaravelModularDDD\Testing\Traits\TestsQueries;
+use LaravelModularDDD\Testing\Traits\MocksRepositories;
+use LaravelModularDDD\Testing\Traits\GeneratesTestData;
+
+/**
+ * {{ query }}HandlerTest
+ *
+ * Unit tests for {{ query }} query handler.
+ * Tests query execution, performance, and result validation.
+ *
+ * @group {{ module }}
+ * @group queries
+ * @group unit
+ */
+final class {{ query }}HandlerTest extends TestCase
+{
+    use TestsQueries;
+    use MocksRepositories;
+    use GeneratesTestData;
+
+    private {{ query }}Handler $handler;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->handler = $this->app->make({{ query }}Handler::class);
+    }
+
+    /**
+     * @test
+     */
+    public function it_returns_expected_result_format(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(3)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQueryResult($query, function ($result) {
+            return is_array($result) && count($result) === 3;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_returns_empty_result_when_no_data_exists(): void
+    {
+        // Arrange
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, []);
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQueryReturnsEmpty($query);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_pagination_correctly(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(25)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQueryPagination($query, 10, 25);
+    }
+
+    /**
+     * @test
+     */
+    public function it_applies_filters_correctly(): void
+    {
+        // Arrange
+        $activeModels = {{ aggregate }}Factory::times(3)->create(['status' => 'active']);
+        $inactiveModels = {{ aggregate }}Factory::times(2)->create(['status' => 'inactive']);
+        $allModels = array_merge($activeModels, $inactiveModels);
+
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $allModels);
+
+        $query = new {{ query }}();
+        $filters = ['status' => 'active'];
+
+        // Act & Assert
+        $this->assertQueryFiltering($query, $filters, function ($result, $filters) {
+            foreach ($result as $item) {
+                if ($item['status'] !== $filters['status']) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_sorts_results_correctly(): void
+    {
+        // Arrange
+        $readModels = [
+            {{ aggregate }}Factory::create(['name' => 'Charlie']),
+            {{ aggregate }}Factory::create(['name' => 'Alice']),
+            {{ aggregate }}Factory::create(['name' => 'Bob']),
+        ];
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQuerySorting($query, 'name', 'asc');
+        $this->assertQuerySorting($query, 'name', 'desc');
+    }
+
+    /**
+     * @test
+     */
+    public function it_executes_within_performance_limits(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(100)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert - Should execute within 50ms
+        $this->assertQueryPerformance($query, 0.05);
+    }
+
+    /**
+     * @test
+     */
+    public function it_uses_caching_when_enabled(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(5)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQueryCaching($query, true);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_concurrent_executions(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(10)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert
+        $this->assertQueryConcurrency($query, 5);
+    }
+
+    /**
+     * @test
+     */
+    public function it_respects_authorization_rules(): void
+    {
+        // Arrange
+        $query = new {{ query }}();
+        $authorizedUser = User::factory()->create(['role' => 'admin']);
+        $unauthorizedUser = User::factory()->create(['role' => 'guest']);
+
+        // Act & Assert
+        $this->assertQueryAuthorization($query, $authorizedUser, true);
+        $this->assertQueryAuthorization($query, $unauthorizedUser, false);
+    }
+
+    /**
+     * @test
+     */
+    public function it_validates_result_schema(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(3)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        $expectedSchema = [
+            'id' => 'string',
+            'name' => 'string',
+            'status' => 'string',
+            'created_at' => 'string',
+        ];
+
+        // Act & Assert
+        $this->assertQueryResultSchema($query, $expectedSchema);
+    }
+
+    /**
+     * @test
+     */
+    public function it_uses_minimal_database_queries(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(10)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert - Should use at most 2 database queries
+        $this->assertQueryDatabaseLoad($query, 2);
+    }
+
+    /**
+     * @test
+     */
+    public function it_uses_reasonable_memory(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(1000)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+
+        // Act & Assert - Should use less than 10MB
+        $this->assertQueryMemoryUsage($query, 10 * 1024 * 1024);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_various_parameter_combinations(): void
+    {
+        // Arrange
+        $readModels = {{ aggregate }}Factory::times(20)->create();
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $parameterSets = [
+            'default_parameters' => [
+                'parameters' => [],
+                'validator' => fn($result) => is_array($result) && count($result) <= 20,
+            ],
+            'with_pagination' => [
+                'parameters' => ['page' => 2, 'limit' => 5],
+                'validator' => fn($result) => is_array($result) && count($result) <= 5,
+            ],
+            'with_filters' => [
+                'parameters' => ['status' => 'active'],
+                'validator' => fn($result) => is_array($result),
+            ],
+            'with_sorting' => [
+                'parameters' => ['sort' => 'name', 'direction' => 'desc'],
+                'validator' => fn($result) => is_array($result),
+            ],
+        ];
+
+        // Act & Assert
+        $this->assertQueryWithParameters({{ query }}::class, $parameterSets);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_search_functionality(): void
+    {
+        // Arrange
+        $readModels = [
+            {{ aggregate }}Factory::create(['name' => 'John Doe']),
+            {{ aggregate }}Factory::create(['name' => 'Jane Smith']),
+            {{ aggregate }}Factory::create(['name' => 'Bob Johnson']),
+        ];
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+        $searchFilters = ['search' => 'John'];
+
+        // Act & Assert
+        $this->assertQueryFiltering($query, $searchFilters, function ($result, $filters) {
+            foreach ($result as $item) {
+                if (stripos($item['name'], $filters['search']) === false) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_date_range_filters(): void
+    {
+        // Arrange
+        $startDate = now()->subDays(30);
+        $endDate = now();
+
+        $recentModels = {{ aggregate }}Factory::times(3)->create([
+            'created_at' => now()->subDays(15)
+        ]);
+        $oldModels = {{ aggregate }}Factory::times(2)->create([
+            'created_at' => now()->subDays(60)
+        ]);
+
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class,
+            array_merge($recentModels, $oldModels)
+        );
+
+        $query = new {{ query }}();
+        $dateFilters = [
+            'created_from' => $startDate->toDateString(),
+            'created_to' => $endDate->toDateString()
+        ];
+
+        // Act & Assert
+        $this->assertQueryFiltering($query, $dateFilters, function ($result, $filters) {
+            foreach ($result as $item) {
+                $itemDate = new \DateTime($item['created_at']);
+                $fromDate = new \DateTime($filters['created_from']);
+                $toDate = new \DateTime($filters['created_to']);
+
+                if ($itemDate < $fromDate || $itemDate > $toDate) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_multiple_sort_criteria(): void
+    {
+        // Arrange
+        $readModels = [
+            {{ aggregate }}Factory::create(['category' => 'A', 'name' => 'Zebra']),
+            {{ aggregate }}Factory::create(['category' => 'A', 'name' => 'Apple']),
+            {{ aggregate }}Factory::create(['category' => 'B', 'name' => 'Banana']),
+        ];
+        $this->mockReadModelRepository({{ aggregate }}ReadModelRepository::class, $readModels);
+
+        $query = new {{ query }}();
+        $sortCriteria = ['category' => 'asc', 'name' => 'asc'];
+
+        // Act & Assert
+        $this->assertQueryMultipleSorting($query, $sortCriteria);
+    }
+}

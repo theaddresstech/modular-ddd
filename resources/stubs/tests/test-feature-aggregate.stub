@@ -1,0 +1,482 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Feature\Aggregates;
+
+use {{ testNamespace }}\TestCase;
+use {{ testNamespace }}\Factories\{{ aggregate }}Factory;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use LaravelModularDDD\Testing\Traits\GeneratesTestData;
+
+/**
+ * {{ aggregate }}FeatureTest
+ *
+ * Feature tests for {{ aggregate }} API endpoints and workflows.
+ * Tests complete request-response cycles and business scenarios.
+ *
+ * @group {{ module }}
+ * @group {{ aggregateLower }}
+ * @group feature
+ */
+final class {{ aggregate }}FeatureTest extends TestCase
+{
+    use RefreshDatabase;
+    use GeneratesTestData;
+
+    /**
+     * @test
+     */
+    public function it_can_create_{{ aggregateLower }}_via_api(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $data = [
+            'name' => $this->generateName(),
+            'description' => $this->generateDescription(),
+        ];
+
+        // Act
+        $response = $this->actingAs($user)
+            ->postJson("/api/{{ aggregateLower }}", $data);
+
+        // Assert
+        $response->assertStatus(201)
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'name',
+                    'description',
+                    'status',
+                    'created_at',
+                    'updated_at',
+                ]
+            ]);
+
+        $this->assertDatabaseHas('{{ aggregateLower }}s', [
+            'name' => $data['name'],
+            'description' => $data['description'],
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_validates_required_fields_on_creation(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $invalidData = [
+            'name' => '', // Required field empty
+            'description' => $this->generateDescription(),
+        ];
+
+        // Act
+        $response = $this->actingAs($user)
+            ->postJson("/api/{{ aggregateLower }}", $invalidData);
+
+        // Assert
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_retrieve_{{ aggregateLower }}_list(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        {{ aggregate }}Factory::times(5)->create();
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}");
+
+        // Assert
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'description',
+                        'status',
+                        'created_at',
+                    ]
+                ],
+                'meta' => [
+                    'total',
+                    'page',
+                    'per_page',
+                ]
+            ]);
+
+        $this->assertCount(5, $response->json('data'));
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_retrieve_single_{{ aggregateLower }}(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        ${{ aggregateLower }} = {{ aggregate }}Factory::create();
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}");
+
+        // Assert
+        $response->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'id' => ${{ aggregateLower }}->id,
+                    'name' => ${{ aggregateLower }}->name,
+                    'description' => ${{ aggregateLower }}->description,
+                ]
+            ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_returns_404_for_non_existent_{{ aggregateLower }}(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $nonExistentId = $this->generateId();
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}/{$nonExistentId}");
+
+        // Assert
+        $response->assertStatus(404);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_update_{{ aggregateLower }}(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        ${{ aggregateLower }} = {{ aggregate }}Factory::create();
+        $updateData = [
+            'name' => 'Updated Name',
+            'description' => 'Updated Description',
+        ];
+
+        // Act
+        $response = $this->actingAs($user)
+            ->putJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}", $updateData);
+
+        // Assert
+        $response->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'id' => ${{ aggregateLower }}->id,
+                    'name' => $updateData['name'],
+                    'description' => $updateData['description'],
+                ]
+            ]);
+
+        $this->assertDatabaseHas('{{ aggregateLower }}s', [
+            'id' => ${{ aggregateLower }}->id,
+            'name' => $updateData['name'],
+            'description' => $updateData['description'],
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_can_delete_{{ aggregateLower }}(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        ${{ aggregateLower }} = {{ aggregate }}Factory::create();
+
+        // Act
+        $response = $this->actingAs($user)
+            ->deleteJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}");
+
+        // Assert
+        $response->assertStatus(204);
+
+        $this->assertDatabaseMissing('{{ aggregateLower }}s', [
+            'id' => ${{ aggregateLower }}->id,
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_requires_authentication_for_{{ aggregateLower }}_operations(): void
+    {
+        // Arrange
+        ${{ aggregateLower }} = {{ aggregate }}Factory::create();
+
+        // Act & Assert - Create
+        $this->postJson("/api/{{ aggregateLower }}", [])
+            ->assertStatus(401);
+
+        // Act & Assert - List
+        $this->getJson("/api/{{ aggregateLower }}")
+            ->assertStatus(401);
+
+        // Act & Assert - Show
+        $this->getJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}")
+            ->assertStatus(401);
+
+        // Act & Assert - Update
+        $this->putJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}", [])
+            ->assertStatus(401);
+
+        // Act & Assert - Delete
+        $this->deleteJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}")
+            ->assertStatus(401);
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_pagination_in_list_endpoint(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        {{ aggregate }}Factory::times(25)->create();
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}?page=2&per_page=10");
+
+        // Assert
+        $response->assertStatus(200)
+            ->assertJson([
+                'meta' => [
+                    'page' => 2,
+                    'per_page' => 10,
+                    'total' => 25,
+                ]
+            ]);
+
+        $this->assertCount(10, $response->json('data'));
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_filtering_in_list_endpoint(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        {{ aggregate }}Factory::times(3)->create(['status' => 'active']);
+        {{ aggregate }}Factory::times(2)->create(['status' => 'inactive']);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}?status=active");
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertCount(3, $response->json('data'));
+
+        // Verify all returned items have active status
+        foreach ($response->json('data') as $item) {
+            $this->assertEquals('active', $item['status']);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_sorting_in_list_endpoint(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        {{ aggregate }}Factory::create(['name' => 'Charlie']);
+        {{ aggregate }}Factory::create(['name' => 'Alice']);
+        {{ aggregate }}Factory::create(['name' => 'Bob']);
+
+        // Act - Sort ascending
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}?sort=name&direction=asc");
+
+        // Assert
+        $response->assertStatus(200);
+        $names = collect($response->json('data'))->pluck('name')->toArray();
+        $this->assertEquals(['Alice', 'Bob', 'Charlie'], $names);
+
+        // Act - Sort descending
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}?sort=name&direction=desc");
+
+        // Assert
+        $response->assertStatus(200);
+        $names = collect($response->json('data'))->pluck('name')->toArray();
+        $this->assertEquals(['Charlie', 'Bob', 'Alice'], $names);
+    }
+
+    /**
+     * @test
+     */
+    public function it_supports_search_in_list_endpoint(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        {{ aggregate }}Factory::create(['name' => 'John Doe']);
+        {{ aggregate }}Factory::create(['name' => 'Jane Smith']);
+        {{ aggregate }}Factory::create(['name' => 'Bob Johnson']);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->getJson("/api/{{ aggregateLower }}?search=John");
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data')); // John Doe and Bob Johnson
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_business_workflow_scenario(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+
+        // Step 1: Create {{ aggregateLower }}
+        $createData = [
+            'name' => $this->generateName(),
+            'description' => $this->generateDescription(),
+        ];
+
+        $createResponse = $this->actingAs($user)
+            ->postJson("/api/{{ aggregateLower }}", $createData);
+
+        $createResponse->assertStatus(201);
+        ${{ aggregateLower }}Id = $createResponse->json('data.id');
+
+        // Step 2: Update {{ aggregateLower }}
+        $updateData = [
+            'name' => 'Updated ' . $createData['name'],
+            'description' => 'Updated ' . $createData['description'],
+        ];
+
+        $updateResponse = $this->actingAs($user)
+            ->putJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}Id}", $updateData);
+
+        $updateResponse->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'name' => $updateData['name'],
+                    'description' => $updateData['description'],
+                ]
+            ]);
+
+        // Step 3: Activate {{ aggregateLower }}
+        $activateResponse = $this->actingAs($user)
+            ->postJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}Id}/activate");
+
+        $activateResponse->assertStatus(200)
+            ->assertJson([
+                'data' => [
+                    'status' => 'active'
+                ]
+            ]);
+
+        // Step 4: Verify final state
+        $this->assertDatabaseHas('{{ aggregateLower }}s', [
+            'id' => ${{ aggregateLower }}Id,
+            'name' => $updateData['name'],
+            'description' => $updateData['description'],
+            'status' => 'active',
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_concurrent_updates_gracefully(): void
+    {
+        // Arrange
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        ${{ aggregateLower }} = {{ aggregate }}Factory::create();
+
+        // Act - Simulate concurrent updates
+        $updateData1 = ['name' => 'Update from User 1'];
+        $updateData2 = ['name' => 'Update from User 2'];
+
+        $response1 = $this->actingAs($user1)
+            ->putJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}", $updateData1);
+
+        $response2 = $this->actingAs($user2)
+            ->putJson("/api/{{ aggregateLower }}/{${{ aggregateLower }}->id}", $updateData2);
+
+        // Assert - Both should succeed or handle optimistic locking
+        $this->assertTrue(
+            ($response1->status() === 200 && $response2->status() === 200) ||
+            ($response1->status() === 200 && $response2->status() === 409) ||
+            ($response1->status() === 409 && $response2->status() === 200)
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_respects_authorization_rules(): void
+    {
+        // Arrange
+        $adminUser = User::factory()->create(['role' => 'admin']);
+        $regularUser = User::factory()->create(['role' => 'user']);
+        $guestUser = User::factory()->create(['role' => 'guest']);
+
+        $data = [
+            'name' => $this->generateName(),
+            'description' => $this->generateDescription(),
+        ];
+
+        // Act & Assert - Admin can create
+        $this->actingAs($adminUser)
+            ->postJson("/api/{{ aggregateLower }}", $data)
+            ->assertStatus(201);
+
+        // Act & Assert - Regular user can create
+        $this->actingAs($regularUser)
+            ->postJson("/api/{{ aggregateLower }}", $data)
+            ->assertStatus(201);
+
+        // Act & Assert - Guest cannot create
+        $this->actingAs($guestUser)
+            ->postJson("/api/{{ aggregateLower }}", $data)
+            ->assertStatus(403);
+    }
+
+    /**
+     * @test
+     */
+    public function it_handles_api_rate_limiting(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+
+        // Act - Make multiple rapid requests
+        $responses = [];
+        for ($i = 0; $i < 100; $i++) {
+            $responses[] = $this->actingAs($user)
+                ->getJson("/api/{{ aggregateLower }}");
+        }
+
+        // Assert - Should eventually hit rate limit
+        $rateLimitedResponses = collect($responses)
+            ->filter(fn($response) => $response->status() === 429);
+
+        $this->assertGreaterThan(0, $rateLimitedResponses->count(),
+            'Rate limiting should be triggered after many requests'
+        );
+    }
+}

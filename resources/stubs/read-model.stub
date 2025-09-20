@@ -1,0 +1,272 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\{{ module }}\Database\Factories\{{ aggregate }}ReadModelFactory;
+
+/**
+ * {{ class }}
+ *
+ * Read model for {{ aggregate }} aggregate.
+ * Optimized for queries and reporting, denormalized for performance.
+ *
+ * @property string $id
+ * @property string $name
+ * @property string|null $description
+ * @property string $status
+ * @property int $version
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
+ */
+final class {{ class }} extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    /**
+     * The table associated with the model.
+     */
+    protected $table = '{{ module_lower }}_{{ aggregate_lower }}_read_models';
+
+    /**
+     * The primary key for the model.
+     */
+    protected $primaryKey = 'id';
+
+    /**
+     * The "type" of the primary key ID.
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that are mass assignable.
+     */
+    protected $fillable = [
+        'id',
+        'name',
+        'description',
+        'status',
+        'version',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        'version' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
+
+    /**
+     * The attributes that should be hidden for arrays.
+     */
+    protected $hidden = [
+        // Add sensitive fields here
+    ];
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): {{ aggregate }}ReadModelFactory
+    {
+        return {{ aggregate }}ReadModelFactory::new();
+    }
+
+    /**
+     * Scope to filter active {{ aggregate_lower }}s.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * Scope to filter deleted {{ aggregate_lower }}s.
+     */
+    public function scopeDeleted($query)
+    {
+        return $query->where('status', 'deleted');
+    }
+
+    /**
+     * Scope to filter by name pattern.
+     */
+    public function scopeNameLike($query, string $pattern)
+    {
+        return $query->where('name', 'like', "%{$pattern}%");
+    }
+
+    /**
+     * Scope to filter by description pattern.
+     */
+    public function scopeDescriptionLike($query, string $pattern)
+    {
+        return $query->where('description', 'like', "%{$pattern}%");
+    }
+
+    /**
+     * Scope to search across name and description.
+     */
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(function ($query) use ($term) {
+            $query->where('name', 'like', "%{$term}%")
+                  ->orWhere('description', 'like', "%{$term}%");
+        });
+    }
+
+    /**
+     * Scope to filter by minimum version.
+     */
+    public function scopeMinVersion($query, int $version)
+    {
+        return $query->where('version', '>=', $version);
+    }
+
+    /**
+     * Scope to filter by creation date range.
+     */
+    public function scopeCreatedBetween($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('created_at', [$startDate, $endDate]);
+    }
+
+    /**
+     * Scope to order by most recent.
+     */
+    public function scopeLatest($query)
+    {
+        return $query->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Scope to order by oldest.
+     */
+    public function scopeOldest($query)
+    {
+        return $query->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Scope to order by name alphabetically.
+     */
+    public function scopeAlphabetical($query)
+    {
+        return $query->orderBy('name', 'asc');
+    }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'id';
+    }
+
+    /**
+     * Check if the {{ aggregate_lower }} is active.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Check if the {{ aggregate_lower }} is deleted.
+     */
+    public function isDeleted(): bool
+    {
+        return $this->status === 'deleted';
+    }
+
+    /**
+     * Get display name for the {{ aggregate_lower }}.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name ?: 'Unnamed {{ aggregate }}';
+    }
+
+    /**
+     * Get short description for display.
+     */
+    public function getShortDescriptionAttribute(): string
+    {
+        if (!$this->description) {
+            return '';
+        }
+
+        return strlen($this->description) > 100
+            ? substr($this->description, 0, 97) . '...'
+            : $this->description;
+    }
+
+    /**
+     * Get status badge class for UI.
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return match ($this->status) {
+            'active' => 'badge-success',
+            'deleted' => 'badge-danger',
+            default => 'badge-secondary',
+        };
+    }
+
+    /**
+     * Get human-readable status.
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'active' => 'Active',
+            'deleted' => 'Deleted',
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * Convert the model to its array representation for API.
+     */
+    public function toApiArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'status' => $this->status,
+            'version' => $this->version,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+            'is_active' => $this->isActive(),
+            'is_deleted' => $this->isDeleted(),
+            'display_name' => $this->display_name,
+            'short_description' => $this->short_description,
+        ];
+    }
+
+    /**
+     * Get summary statistics for {{ aggregate_lower }}s.
+     */
+    public static function getStatistics(): array
+    {
+        return [
+            'total' => self::count(),
+            'active' => self::active()->count(),
+            'deleted' => self::deleted()->count(),
+            'recent' => self::where('created_at', '>=', now()->subDays(7))->count(),
+        ];
+    }
+}

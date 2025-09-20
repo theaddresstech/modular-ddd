@@ -1,0 +1,393 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ factoryNamespace }};
+
+use Faker\Factory as FakerFactory;
+use Faker\Generator as Faker;
+
+/**
+ * BaseFactory
+ *
+ * Base factory class for all test data factories.
+ * Provides common functionality and ensures consistent behavior.
+ *
+ * @template T
+ */
+abstract class BaseFactory
+{
+    protected Faker $faker;
+    protected array $states = [];
+    protected array $afterCreating = [];
+    protected array $afterMaking = [];
+    protected int $count = 1;
+
+    /**
+     * The model this factory creates.
+     */
+    protected string $model;
+
+    public function __construct()
+    {
+        $this->faker = FakerFactory::create();
+    }
+
+    /**
+     * Define the model's default state.
+     */
+    abstract public function definition(): array;
+
+    /**
+     * Create a new factory instance.
+     */
+    public static function new(): static
+    {
+        return new static();
+    }
+
+    /**
+     * Create a new factory instance (alias for new).
+     */
+    public static function make(): static
+    {
+        return static::new();
+    }
+
+    /**
+     * Set the number of models to create.
+     */
+    public static function times(int $count): static
+    {
+        $factory = static::new();
+        $factory->count = $count;
+        return $factory;
+    }
+
+    /**
+     * Add a state transformation to the factory.
+     */
+    public function state(array $state): static
+    {
+        $factory = clone $this;
+        $factory->states[] = $state;
+        return $factory;
+    }
+
+    /**
+     * Create model instances.
+     */
+    public function create(array $attributes = []): mixed
+    {
+        $instances = $this->make($attributes);
+
+        if ($this->count === 1) {
+            $this->callAfterCreating([$instances]);
+            return $instances;
+        }
+
+        $this->callAfterCreating($instances);
+        return $instances;
+    }
+
+    /**
+     * Make model instances without persisting.
+     */
+    public function make(array $attributes = []): mixed
+    {
+        if ($this->count === 1) {
+            return $this->makeInstance($attributes);
+        }
+
+        $instances = [];
+        for ($i = 0; $i < $this->count; $i++) {
+            $instances[] = $this->makeInstance($attributes);
+        }
+
+        return $instances;
+    }
+
+    /**
+     * Create a single model instance.
+     */
+    protected function makeInstance(array $attributes = []): object
+    {
+        $definition = $this->definition();
+
+        // Apply all state transformations
+        foreach ($this->states as $state) {
+            $definition = array_merge($definition, $state);
+        }
+
+        // Apply custom attributes
+        $definition = array_merge($definition, $attributes);
+
+        // Convert to model object
+        $instance = $this->createModelInstance($definition);
+
+        $this->callAfterMaking([$instance]);
+
+        return $instance;
+    }
+
+    /**
+     * Create model instance from data array.
+     */
+    protected function createModelInstance(array $data): object
+    {
+        // Default implementation creates a generic object
+        // Override in specific factories for proper model instantiation
+        return (object) $data;
+    }
+
+    /**
+     * Create and return raw attributes array.
+     */
+    public function raw(array $attributes = []): array
+    {
+        $definition = $this->definition();
+
+        foreach ($this->states as $state) {
+            $definition = array_merge($definition, $state);
+        }
+
+        return array_merge($definition, $attributes);
+    }
+
+    /**
+     * Convert to array (alias for raw).
+     */
+    public function toArray(array $attributes = []): array
+    {
+        return $this->raw($attributes);
+    }
+
+    /**
+     * Add an after creating callback.
+     */
+    public function afterCreating(callable $callback): static
+    {
+        $factory = clone $this;
+        $factory->afterCreating[] = $callback;
+        return $factory;
+    }
+
+    /**
+     * Add an after making callback.
+     */
+    public function afterMaking(callable $callback): static
+    {
+        $factory = clone $this;
+        $factory->afterMaking[] = $callback;
+        return $factory;
+    }
+
+    /**
+     * Call after creating callbacks.
+     */
+    protected function callAfterCreating(array $instances): void
+    {
+        foreach ($this->afterCreating as $callback) {
+            $callback($instances);
+        }
+    }
+
+    /**
+     * Call after making callbacks.
+     */
+    protected function callAfterMaking(array $instances): void
+    {
+        foreach ($this->afterMaking as $callback) {
+            $callback($instances);
+        }
+    }
+
+    /**
+     * Create with specific sequence.
+     */
+    public function sequence(...$sequences): static
+    {
+        $factory = clone $this;
+        $sequenceIndex = 0;
+
+        return $factory->afterMaking(function ($instances) use ($sequences, &$sequenceIndex) {
+            foreach ((array) $instances as $instance) {
+                $sequence = $sequences[$sequenceIndex % count($sequences)];
+                if (is_callable($sequence)) {
+                    $sequence($instance, $sequenceIndex);
+                } elseif (is_array($sequence)) {
+                    foreach ($sequence as $key => $value) {
+                        if (is_object($instance)) {
+                            $instance->{$key} = $value;
+                        }
+                    }
+                }
+                $sequenceIndex++;
+            }
+        });
+    }
+
+    /**
+     * Create with unique constraints.
+     */
+    public function unique(string $field): static
+    {
+        static $usedValues = [];
+
+        if (!isset($usedValues[$field])) {
+            $usedValues[$field] = [];
+        }
+
+        return $this->state([
+            $field => function () use ($field, &$usedValues) {
+                do {
+                    $value = $this->faker->unique()->word;
+                } while (in_array($value, $usedValues[$field]));
+
+                $usedValues[$field][] = $value;
+                return $value;
+            }
+        ]);
+    }
+
+    /**
+     * Create with dependent data.
+     */
+    public function withDependent(string $factoryClass, string $relationName, array $attributes = []): static
+    {
+        return $this->afterCreating(function ($instances) use ($factoryClass, $relationName, $attributes) {
+            foreach ((array) $instances as $instance) {
+                $dependent = $factoryClass::new()->create(array_merge($attributes, [
+                    $this->getForeignKey($relationName) => $this->getInstanceId($instance)
+                ]));
+
+                if (is_object($instance) && method_exists($instance, 'addRelation')) {
+                    $instance->addRelation($relationName, $dependent);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get foreign key for relation.
+     */
+    protected function getForeignKey(string $relationName): string
+    {
+        return strtolower($relationName) . '_id';
+    }
+
+    /**
+     * Get instance ID.
+     */
+    protected function getInstanceId(object $instance)
+    {
+        if (isset($instance->id)) {
+            return $instance->id;
+        }
+
+        if (method_exists($instance, 'getId')) {
+            return $instance->getId();
+        }
+
+        return $this->faker->uuid;
+    }
+
+    /**
+     * Create factory for specific testing scenario.
+     */
+    public function forTesting(string $scenario): static
+    {
+        return match ($scenario) {
+            'performance' => $this->state([
+                'created_at' => now(),
+                'test_scenario' => 'performance',
+            ]),
+            'edge_cases' => $this->state([
+                'test_scenario' => 'edge_cases',
+            ]),
+            'validation' => $this->state([
+                'test_scenario' => 'validation',
+            ]),
+            'integration' => $this->state([
+                'test_scenario' => 'integration',
+            ]),
+            default => $this,
+        };
+    }
+
+    /**
+     * Reset static state (useful for tests).
+     */
+    public static function reset(): void
+    {
+        // Override in child classes if needed
+    }
+
+    /**
+     * Create invalid instance for validation testing.
+     */
+    public function invalid(): static
+    {
+        return $this->state([
+            'invalid' => true,
+        ]);
+    }
+
+    /**
+     * Create instance with minimum required data.
+     */
+    public function minimal(): static
+    {
+        return $this->state([
+            'minimal' => true,
+        ]);
+    }
+
+    /**
+     * Create instance with maximum data.
+     */
+    public function complete(): static
+    {
+        return $this->state([
+            'complete' => true,
+        ]);
+    }
+
+    /**
+     * Create instance for specific module.
+     */
+    public function forModule(string $module): static
+    {
+        return $this->state([
+            'module' => $module,
+        ]);
+    }
+
+    /**
+     * Create instance with metadata.
+     */
+    public function withMetadata(array $metadata): static
+    {
+        return $this->state([
+            'metadata' => $metadata,
+        ]);
+    }
+
+    /**
+     * Create instance in specific state.
+     */
+    public function inState(string $state): static
+    {
+        return $this->state([
+            'state' => $state,
+        ]);
+    }
+
+    /**
+     * Get faker instance.
+     */
+    protected function faker(): Faker
+    {
+        return $this->faker;
+    }
+}

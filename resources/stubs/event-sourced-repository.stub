@@ -1,0 +1,170 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository;
+use LaravelModularDDD\EventSourcing\Contracts\EventStoreInterface;
+use LaravelModularDDD\EventSourcing\Contracts\SnapshotStoreInterface;
+use LaravelModularDDD\EventSourcing\Snapshot\SnapshotStrategyInterface;
+use Modules\{{ module }}\Domain\Repositories\{{ interface }};
+use Modules\{{ module }}\Domain\Models\{{ aggregate }};
+use Modules\{{ module }}\Domain\ValueObjects\{{ id_class }};
+use Modules\{{ module }}\Domain\Exceptions\{{ aggregate }}Exception;
+{{#if with_caching}}use LaravelModularDDD\CQRS\Caching\MultiTierCacheManager;{{/if}}
+{{#if with_specifications}}use LaravelModularDDD\Core\Domain\Specification;{{/if}}
+
+/**
+ * {{ class }}
+ *
+ * Event-sourced repository implementation for {{ aggregate }} aggregate.
+ * Handles persistence through event streams and snapshots.
+ */
+final class {{ class }} extends EventSourcedAggregateRepository implements {{ interface }}
+{
+    {{#if with_caching}}
+    private MultiTierCacheManager $cacheManager;
+
+    {{/if}}
+    public function __construct(
+        EventStoreInterface $eventStore,
+        SnapshotStoreInterface $snapshotStore,
+        SnapshotStrategyInterface $snapshotStrategy{{#if with_caching}},
+        MultiTierCacheManager $cacheManager{{/if}}
+    ) {
+        parent::__construct($eventStore, $snapshotStore, $snapshotStrategy);
+        {{#if with_caching}}
+        $this->cacheManager = $cacheManager;
+        {{/if}}
+    }
+
+    /**
+     * Save aggregate to event store
+     */
+    public function save({{ aggregate }} ${{ aggregate_lower }}): void
+    {
+        $this->saveAggregate(${{ aggregate_lower }});
+
+        {{#if with_caching}}
+        // Invalidate cache
+        $this->invalidateCache(${{ aggregate_lower }}->getId());
+        {{/if}}
+    }
+
+    /**
+     * Find aggregate by ID
+     */
+    public function findById({{ id_class }} $id): ?{{ aggregate }}
+    {
+        {{#if with_caching}}
+        // Check cache first
+        $cacheKey = "{{ aggregate_lower }}:{$id->toString()}";
+        $cached = $this->cacheManager->get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        {{/if}}
+        ${{ aggregate_lower }} = $this->loadAggregate({{ aggregate }}::class, $id->toString());
+
+        {{#if with_caching}}
+        // Cache the result
+        if (${{ aggregate_lower }}) {
+            $this->cacheManager->put($cacheKey, ${{ aggregate_lower }}, 3600);
+        }
+
+        {{/if}}
+        return ${{ aggregate_lower }};
+    }
+
+    /**
+     * Get aggregate by ID (throws exception if not found)
+     */
+    public function getById({{ id_class }} $id): {{ aggregate }}
+    {
+        ${{ aggregate_lower }} = $this->findById($id);
+
+        if (!${{ aggregate_lower }}) {
+            throw {{ aggregate }}Exception::notFound($id);
+        }
+
+        return ${{ aggregate_lower }};
+    }
+
+    /**
+     * Check if aggregate exists
+     */
+    public function exists({{ id_class }} $id): bool
+    {
+        return $this->findById($id) !== null;
+    }
+
+    /**
+     * Delete aggregate (marks as deleted via domain method)
+     */
+    public function delete({{ id_class }} $id): void
+    {
+        ${{ aggregate_lower }} = $this->getById($id);
+        ${{ aggregate_lower }}->delete();
+        $this->save(${{ aggregate_lower }});
+    }
+
+    /**
+     * Find all aggregates (use with caution in production)
+     */
+    public function findAll(): array
+    {
+        // This is a simplified implementation
+        // In production, you'd typically use read models for this
+        throw new \BadMethodCallException(
+            'findAll() not implemented for event-sourced aggregates. Use read models instead.'
+        );
+    }
+
+    {{#if with_specifications}}
+    /**
+     * Find aggregates by specification
+     */
+    public function findBySpecification(Specification $specification): array
+    {
+        // This would require implementing specification pattern
+        // with event store querying capabilities
+        throw new \BadMethodCallException(
+            'Specification queries not implemented. Use read models and query handlers instead.'
+        );
+    }
+
+    /**
+     * Count aggregates by specification
+     */
+    public function countBySpecification(Specification $specification): int
+    {
+        throw new \BadMethodCallException(
+            'Specification counting not implemented. Use read models and query handlers instead.'
+        );
+    }
+    {{/if}}
+
+    /**
+     * Get next available ID
+     */
+    public function nextIdentity(): {{ id_class }}
+    {
+        return {{ id_class }}::generate();
+    }
+
+    {{#if with_caching}}
+    /**
+     * Invalidate cache for aggregate
+     */
+    private function invalidateCache({{ id_class }} $id): void
+    {
+        $cacheKey = "{{ aggregate_lower }}:{$id->toString()}";
+        $this->cacheManager->forget($cacheKey);
+
+        // Also invalidate related cache tags
+        $this->cacheManager->invalidateTags(['{{ module }}', '{{ aggregate_lower }}']);
+    }
+    {{/if}}
+}

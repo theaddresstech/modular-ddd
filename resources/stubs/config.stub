@@ -1,0 +1,380 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | {{ module }} Module Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration settings for the {{ module }} module.
+    | These settings control behavior, performance, and integration options.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Module Settings
+    |--------------------------------------------------------------------------
+    */
+    'enabled' => env('{{ module_upper }}_ENABLED', true),
+    'debug' => env('{{ module_upper }}_DEBUG', false),
+    'version' => '1.0.0',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Domain Configuration
+    |--------------------------------------------------------------------------
+    */
+    'domain' => [
+        // Business rules configuration
+        'business_rules' => [
+            'max_name_length' => 255,
+            'max_description_length' => 1000,
+            'allow_empty_description' => true,
+            'name_validation_pattern' => '/^[a-zA-Z0-9\s\-_]+$/',
+        ],
+
+        // Aggregate settings
+        'aggregates' => [
+            '{{ aggregate_lower }}' => [
+                'max_events_per_stream' => 1000,
+                'snapshot_frequency' => 50,
+                'enable_soft_delete' => true,
+                'enable_versioning' => true,
+            ],
+        ],
+
+        // Value object settings
+        'value_objects' => [
+            'id_format' => 'uuid', // uuid, ulid, custom
+            'strict_validation' => true,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | CQRS Configuration
+    |--------------------------------------------------------------------------
+    */
+    'cqrs' => [
+        // Command bus settings
+        'commands' => [
+            'enable_validation' => true,
+            'enable_authorization' => true,
+            'enable_auditing' => true,
+            'timeout' => 30, // seconds
+        ],
+
+        // Query bus settings
+        'queries' => [
+            'enable_caching' => env('{{ module_upper }}_QUERY_CACHE_ENABLED', true),
+            'cache_ttl' => env('{{ module_upper }}_QUERY_CACHE_TTL', 3600), // seconds
+            'cache_prefix' => '{{ module_lower }}_query',
+            'timeout' => 15, // seconds
+        ],
+
+        // Handler registration
+        'handlers' => [
+            'auto_discovery' => true,
+            'discovery_paths' => [
+                'Commands/Handlers',
+                'Queries/Handlers',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Event Sourcing Configuration
+    |--------------------------------------------------------------------------
+    */
+    'event_sourcing' => [
+        // Event store settings
+        'store' => [
+            'connection' => env('{{ module_upper }}_EVENT_STORE_CONNECTION', 'mysql'),
+            'table_prefix' => '{{ module_lower }}_',
+            'enable_encryption' => env('{{ module_upper }}_EVENT_ENCRYPTION', false),
+            'encryption_key' => env('{{ module_upper }}_EVENT_ENCRYPTION_KEY'),
+        ],
+
+        // Event streaming
+        'streaming' => [
+            'enable_async_projection' => env('{{ module_upper }}_ASYNC_PROJECTION', true),
+            'batch_size' => 100,
+            'max_retry_attempts' => 3,
+            'retry_delay' => 5, // seconds
+        ],
+
+        // Snapshots
+        'snapshots' => [
+            'enabled' => env('{{ module_upper }}_SNAPSHOTS_ENABLED', true),
+            'frequency' => 50, // events
+            'retention_days' => 90,
+            'compression' => env('{{ module_upper }}_SNAPSHOT_COMPRESSION', 'gzip'),
+        ],
+
+        // Event replay
+        'replay' => [
+            'chunk_size' => 1000,
+            'memory_limit' => '512M',
+            'time_limit' => 300, // seconds
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Projection Configuration
+    |--------------------------------------------------------------------------
+    */
+    'projections' => [
+        // Read model settings
+        'read_models' => [
+            '{{ aggregate_lower }}' => [
+                'table' => '{{ module_lower }}_{{ aggregate_lower }}_read_models',
+                'enable_soft_deletes' => true,
+                'enable_timestamps' => true,
+                'enable_full_text_search' => true,
+            ],
+        ],
+
+        // Projector settings
+        'projectors' => [
+            'enable_recovery' => true,
+            'enable_monitoring' => true,
+            'health_check_interval' => 300, // seconds
+            'error_threshold' => 10, // max errors before stopping
+        ],
+
+        // Projection rebuild
+        'rebuild' => [
+            'chunk_size' => 500,
+            'memory_limit' => '1G',
+            'time_limit' => 0, // unlimited
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Saga Configuration
+    |--------------------------------------------------------------------------
+    */
+    'sagas' => [
+        'enabled' => env('{{ module_upper }}_SAGAS_ENABLED', true),
+        'storage' => [
+            'connection' => env('{{ module_upper }}_SAGA_CONNECTION', 'mysql'),
+            'table' => '{{ module_lower }}_sagas',
+        ],
+        'timeout' => 3600, // seconds
+        'max_retries' => 5,
+        'retry_delay' => 60, // seconds
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance Configuration
+    |--------------------------------------------------------------------------
+    */
+    'performance' => [
+        // Caching
+        'cache' => [
+            'store' => env('{{ module_upper }}_CACHE_STORE', 'redis'),
+            'prefix' => '{{ module_lower }}',
+            'default_ttl' => 3600,
+        ],
+
+        // Database
+        'database' => [
+            'connection' => env('{{ module_upper }}_DB_CONNECTION', 'mysql'),
+            'enable_query_log' => env('{{ module_upper }}_QUERY_LOG', false),
+            'slow_query_threshold' => 1000, // milliseconds
+        ],
+
+        // Memory management
+        'memory' => [
+            'max_aggregates_in_memory' => 1000,
+            'gc_probability' => 1,
+            'gc_divisor' => 100,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    */
+    'api' => [
+        // Rate limiting
+        'rate_limiting' => [
+            'enabled' => env('{{ module_upper }}_RATE_LIMITING', true),
+            'max_attempts' => 60,
+            'decay_minutes' => 1,
+        ],
+
+        // Pagination
+        'pagination' => [
+            'default_per_page' => 15,
+            'max_per_page' => 100,
+        ],
+
+        // Response format
+        'response' => [
+            'include_meta' => true,
+            'include_links' => true,
+            'date_format' => 'c', // ISO 8601
+        ],
+
+        // Validation
+        'validation' => [
+            'strict_mode' => env('{{ module_upper }}_STRICT_VALIDATION', true),
+            'custom_rules' => [],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Configuration
+    |--------------------------------------------------------------------------
+    */
+    'security' => [
+        // Authorization
+        'authorization' => [
+            'enabled' => env('{{ module_upper }}_AUTHORIZATION', true),
+            'default_guard' => 'api',
+            'permissions' => [
+                'create_{{ aggregate_lower }}' => 'Create {{ aggregate }}s',
+                'read_{{ aggregate_lower }}' => 'Read {{ aggregate }}s',
+                'update_{{ aggregate_lower }}' => 'Update {{ aggregate }}s',
+                'delete_{{ aggregate_lower }}' => 'Delete {{ aggregate }}s',
+                'restore_{{ aggregate_lower }}' => 'Restore {{ aggregate }}s',
+            ],
+        ],
+
+        // Auditing
+        'auditing' => [
+            'enabled' => env('{{ module_upper }}_AUDITING', true),
+            'events_to_audit' => [
+                'created',
+                'updated',
+                'deleted',
+                'restored',
+            ],
+            'include_user_agent' => true,
+            'include_ip_address' => true,
+        ],
+
+        // Data protection
+        'data_protection' => [
+            'enable_field_encryption' => false,
+            'encrypted_fields' => [],
+            'enable_anonymization' => false,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monitoring Configuration
+    |--------------------------------------------------------------------------
+    */
+    'monitoring' => [
+        // Logging
+        'logging' => [
+            'enabled' => env('{{ module_upper }}_LOGGING', true),
+            'level' => env('{{ module_upper }}_LOG_LEVEL', 'info'),
+            'channels' => ['daily'],
+            'include_context' => true,
+        ],
+
+        // Metrics
+        'metrics' => [
+            'enabled' => env('{{ module_upper }}_METRICS', false),
+            'driver' => env('{{ module_upper }}_METRICS_DRIVER', 'prometheus'),
+            'prefix' => '{{ module_lower }}_',
+        ],
+
+        // Health checks
+        'health' => [
+            'enabled' => true,
+            'checks' => [
+                'database',
+                'cache',
+                'event_store',
+                'projections',
+            ],
+            'timeout' => 10, // seconds
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Testing Configuration
+    |--------------------------------------------------------------------------
+    */
+    'testing' => [
+        // Test database
+        'database' => [
+            'connection' => env('{{ module_upper }}_TEST_DB_CONNECTION', 'sqlite'),
+            'reset_after_test' => true,
+        ],
+
+        // Mock settings
+        'mocks' => [
+            'enable_event_store_mock' => false,
+            'enable_cache_mock' => false,
+            'enable_queue_mock' => true,
+        ],
+
+        // Test data
+        'factories' => [
+            'default_count' => 10,
+            'enable_relationships' => true,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Integration Configuration
+    |--------------------------------------------------------------------------
+    */
+    'integrations' => [
+        // Queue settings
+        'queue' => [
+            'connection' => env('{{ module_upper }}_QUEUE_CONNECTION', 'default'),
+            'queue_name' => '{{ module_lower }}',
+            'retry_after' => 90,
+            'max_tries' => 3,
+        ],
+
+        // Event broadcasting
+        'broadcasting' => [
+            'enabled' => env('{{ module_upper }}_BROADCASTING', false),
+            'connection' => env('{{ module_upper }}_BROADCAST_CONNECTION', 'pusher'),
+            'channel_prefix' => '{{ module_lower }}.',
+        ],
+
+        // External APIs
+        'external_apis' => [
+            // Add external API configurations here
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Development Configuration
+    |--------------------------------------------------------------------------
+    */
+    'development' => [
+        // Code generation
+        'generators' => [
+            'enable_ide_helper' => true,
+            'auto_generate_docs' => env('{{ module_upper }}_AUTO_DOCS', false),
+            'validate_generated_code' => true,
+        ],
+
+        // Debugging
+        'debugging' => [
+            'enable_query_debugging' => env('{{ module_upper }}_QUERY_DEBUG', false),
+            'enable_event_debugging' => env('{{ module_upper }}_EVENT_DEBUG', false),
+            'log_slow_operations' => env('{{ module_upper }}_LOG_SLOW_OPS', true),
+        ],
+    ],
+];

@@ -1,0 +1,253 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\{{ module }}\Domain\Aggregates\{{ aggregate }};
+use Modules\{{ module }}\Domain\ValueObjects\{{ aggregate }}Id;
+use Modules\{{ module }}\Domain\Repositories\{{ aggregate }}RepositoryInterface;
+use Modules\{{ module }}\Infrastructure\Persistence\EventSourced{{ aggregate }}Repository;
+use Modules\Shared\Infrastructure\Testing\IntegrationTestCase;
+use Ramsey\Uuid\Uuid;
+
+/**
+ * {{ class }}
+ *
+ * Integration tests for {{ aggregate }} repository implementation.
+ * Tests event sourcing, persistence, and aggregate reconstruction.
+ */
+final class {{ class }} extends IntegrationTestCase
+{
+    use RefreshDatabase;
+
+    private {{ aggregate }}RepositoryInterface $repository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository = $this->app->make({{ aggregate }}RepositoryInterface::class);
+    }
+
+    public function test_can_save_and_retrieve_{{ aggregate_lower }}(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        $this->repository->save(${{ aggregate_lower }});
+
+        $retrieved{{ aggregate }} = $this->repository->findById($aggregateId);
+
+        $this->assertNotNull($retrieved{{ aggregate }});
+        $this->assertEquals($aggregateId, $retrieved{{ aggregate }}->getId());
+        $this->assertEquals('Test {{ aggregate }}', $retrieved{{ aggregate }}->getName());
+        $this->assertEquals('Test description', $retrieved{{ aggregate }}->getDescription());
+    }
+
+    public function test_returns_null_for_non_existent_{{ aggregate_lower }}(): void
+    {
+        $nonExistentId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+
+        $result = $this->repository->findById($nonExistentId);
+
+        $this->assertNull($result);
+    }
+
+    public function test_reconstructs_{{ aggregate_lower }}_from_event_stream(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Original Name',
+            'Original description'
+        );
+
+        // Perform multiple operations to generate events
+        ${{ aggregate_lower }}->update('Updated Name', 'Updated description');
+        ${{ aggregate_lower }}->delete();
+        ${{ aggregate_lower }}->restore();
+
+        $this->repository->save(${{ aggregate_lower }});
+
+        // Retrieve and verify final state
+        $reconstructed{{ aggregate }} = $this->repository->findById($aggregateId);
+
+        $this->assertNotNull($reconstructed{{ aggregate }});
+        $this->assertEquals('Updated Name', $reconstructed{{ aggregate }}->getName());
+        $this->assertEquals('Updated description', $reconstructed{{ aggregate }}->getDescription());
+        $this->assertFalse($reconstructed{{ aggregate }}->isDeleted());
+        $this->assertEquals(4, $reconstructed{{ aggregate }}->getVersion()); // 4 events
+    }
+
+    public function test_handles_concurrent_saves_with_optimistic_locking(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }}1 = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        $this->repository->save(${{ aggregate_lower }}1);
+
+        // Load same aggregate in two contexts
+        ${{ aggregate_lower }}A = $this->repository->findById($aggregateId);
+        ${{ aggregate_lower }}B = $this->repository->findById($aggregateId);
+
+        // Modify both
+        ${{ aggregate_lower }}A->update('Name A', 'Description A');
+        ${{ aggregate_lower }}B->update('Name B', 'Description B');
+
+        // Save first one
+        $this->repository->save(${{ aggregate_lower }}A);
+
+        // Second save should detect conflict
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('concurrency conflict');
+
+        $this->repository->save(${{ aggregate_lower }}B);
+    }
+
+    public function test_persists_all_uncommitted_events(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        // Generate multiple events
+        ${{ aggregate_lower }}->update('Updated Name', 'Updated description');
+        ${{ aggregate_lower }}->delete();
+
+        $uncommittedCount = count(${{ aggregate_lower }}->getUncommittedEvents());
+
+        $this->repository->save(${{ aggregate_lower }});
+
+        // Verify all events were persisted
+        $this->assertDatabaseHas('event_streams', [
+            'aggregate_id' => $aggregateId->toString(),
+        ]);
+
+        // Check event count in database
+        $eventCount = \DB::table('event_streams')
+            ->where('aggregate_id', $aggregateId->toString())
+            ->count();
+
+        $this->assertEquals($uncommittedCount, $eventCount);
+    }
+
+    public function test_handles_large_event_streams(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        // Generate many events
+        for ($i = 0; $i < 100; $i++) {
+            ${{ aggregate_lower }}->update("Name {$i}", "Description {$i}");
+        }
+
+        $this->repository->save(${{ aggregate_lower }});
+
+        // Verify reconstruction performance
+        $startTime = microtime(true);
+        $reconstructed{{ aggregate }} = $this->repository->findById($aggregateId);
+        $reconstructionTime = microtime(true) - $startTime;
+
+        $this->assertNotNull($reconstructed{{ aggregate }});
+        $this->assertEquals("Name 99", $reconstructed{{ aggregate }}->getName());
+        $this->assertLessThan(1.0, $reconstructionTime); // Should reconstruct within 1 second
+    }
+
+    public function test_supports_filtering_and_pagination(): void
+    {
+        // Create multiple aggregates
+        $aggregates = [];
+        for ($i = 0; $i < 10; $i++) {
+            $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+            ${{ aggregate_lower }} = {{ aggregate }}::create(
+                $aggregateId,
+                "Test {{ aggregate }} {$i}",
+                "Description {$i}"
+            );
+
+            if ($i % 2 === 0) {
+                ${{ aggregate_lower }}->delete(); // Mark some as deleted
+            }
+
+            $this->repository->save(${{ aggregate_lower }});
+            $aggregates[] = ${{ aggregate_lower }};
+        }
+
+        // Test filtering active aggregates
+        $activeAggregates = $this->repository->findAll(['status' => 'active']);
+        $this->assertCount(5, $activeAggregates);
+
+        // Test pagination
+        $paginatedResults = $this->repository->findAll(['limit' => 3, 'offset' => 0]);
+        $this->assertCount(3, $paginatedResults);
+    }
+
+    public function test_handles_repository_transaction_failures(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        // Simulate database connection failure
+        \DB::shouldReceive('transaction')
+            ->once()
+            ->andThrow(new \PDOException('Database connection lost'));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to save aggregate');
+
+        $this->repository->save(${{ aggregate_lower }});
+    }
+
+    public function test_maintains_event_ordering(): void
+    {
+        $aggregateId = {{ aggregate }}Id::fromString(Uuid::uuid4()->toString());
+        ${{ aggregate_lower }} = {{ aggregate }}::create(
+            $aggregateId,
+            'Test {{ aggregate }}',
+            'Test description'
+        );
+
+        // Generate events in specific order
+        ${{ aggregate_lower }}->update('First Update', 'First description');
+        ${{ aggregate_lower }}->update('Second Update', 'Second description');
+        ${{ aggregate_lower }}->update('Third Update', 'Third description');
+
+        $this->repository->save(${{ aggregate_lower }});
+
+        // Verify events are stored in correct order
+        $events = \DB::table('event_streams')
+            ->where('aggregate_id', $aggregateId->toString())
+            ->orderBy('version')
+            ->get();
+
+        $this->assertEquals('{{ aggregate }}Created', $events[0]->event_type);
+        $this->assertEquals('{{ aggregate }}Updated', $events[1]->event_type);
+        $this->assertEquals('{{ aggregate }}Updated', $events[2]->event_type);
+        $this->assertEquals('{{ aggregate }}Updated', $events[3]->event_type);
+
+        // Verify version sequence
+        foreach ($events as $index => $event) {
+            $this->assertEquals($index + 1, $event->version);
+        }
+    }
+}

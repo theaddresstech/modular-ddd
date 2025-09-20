@@ -1,0 +1,115 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use LaravelModularDDD\CQRS\Contracts\QueryInterface;
+
+/**
+ * {{ class }}
+ *
+ * Query to {{ action }} {{ aggregate_lower }}(s).
+ * {{#if with_caching}}Includes caching for performance optimization.{{/if}}
+ * {{#if with_pagination}}Supports pagination for large datasets.{{/if}}
+ */
+final class {{ class }} implements QueryInterface
+{
+    {{#each properties}}
+    public readonly {{ type }} ${{ name }};
+    {{/each}}
+
+    public function __construct(
+        {{#each properties}}
+        {{ type }} ${{ name }}{{#unless @last}},{{/unless}}
+        {{/each}}
+    ) {
+        {{#each properties}}
+        $this->{{ name }} = ${{ name }};
+        {{/each}}
+    }
+
+    /**
+     * Get query name for routing
+     */
+    public function getQueryName(): string
+    {
+        return '{{ module }}.{{ query }}';
+    }
+
+    /**
+     * Get query ID for tracking
+     */
+    public function getQueryId(): string
+    {
+        return uniqid('qry_', true);
+    }
+
+    {{#if with_caching}}
+    /**
+     * Get cache key
+     */
+    public function getCacheKey(): string
+    {
+        return '{{ cache_key }}';
+    }
+
+    /**
+     * Get cache TTL in seconds
+     */
+    public function getCacheTtl(): int
+    {
+        return {{ cache_ttl }};
+    }
+
+    /**
+     * Get cache tags for invalidation
+     */
+    public function getCacheTags(): array
+    {
+        return ['{{ module }}', '{{ aggregate_lower }}'];
+    }
+
+    /**
+     * Should use cache
+     */
+    public function shouldCache(): bool
+    {
+        return true;
+    }
+    {{/if}}
+
+    /**
+     * Get validation rules
+     */
+    public function rules(): array
+    {
+        return [
+            {{#each properties}}
+            '{{ name }}' => '{{ rules }}',
+            {{/each}}
+        ];
+    }
+
+    /**
+     * Get query metadata
+     */
+    public function getMetadata(): array
+    {
+        return [
+            'aggregate' => '{{ aggregate }}',
+            'action' => '{{ action }}',
+            'module' => '{{ module }}',
+            {{#if with_caching}}'cacheable' => true,{{/if}}
+            {{#if with_pagination}}'paginated' => true,{{/if}}
+        ];
+    }
+
+    /**
+     * Get query timeout in seconds
+     */
+    public function getTimeout(): int
+    {
+        return 30;
+    }
+}

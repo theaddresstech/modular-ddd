@@ -1,0 +1,113 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * {{ class }}
+ *
+ * Migration for {{ module }} module database schema.
+ * Creates tables for event sourcing and read models.
+ */
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Event Streams table for event sourcing
+        Schema::create('{{ module_lower }}_event_streams', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('aggregate_id')->index();
+            $table->string('aggregate_type', 100)->index();
+            $table->unsignedInteger('version');
+            $table->string('event_type', 150)->index();
+            $table->json('event_data');
+            $table->json('metadata')->nullable();
+            $table->timestamp('occurred_at')->index();
+            $table->timestamps();
+
+            // Ensure unique version per aggregate
+            $table->unique(['aggregate_id', 'version']);
+
+            // Optimize for event replay queries
+            $table->index(['aggregate_id', 'version']);
+            $table->index(['aggregate_type', 'occurred_at']);
+        });
+
+        // Read model table for {{ aggregate }}
+        Schema::create('{{ module_lower }}_{{ aggregate_lower }}_read_models', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('name', 255)->index();
+            $table->text('description')->nullable();
+            $table->enum('status', ['active', 'deleted'])->default('active')->index();
+            $table->unsignedInteger('version')->default(1);
+            $table->timestamp('created_at')->index();
+            $table->timestamp('updated_at')->nullable();
+            $table->timestamp('deleted_at')->nullable()->index();
+
+            // Search optimization
+            $table->fullText(['name', 'description']);
+
+            // Status filtering
+            $table->index(['status', 'created_at']);
+        });
+
+        // Projections tracking table
+        Schema::create('{{ module_lower }}_projections', function (Blueprint $table) {
+            $table->string('name', 150)->primary();
+            $table->unsignedBigInteger('last_processed_event_id')->default(0);
+            $table->timestamp('last_processed_at')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+        });
+
+        // Snapshots table for performance optimization
+        Schema::create('{{ module_lower }}_snapshots', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('aggregate_id')->index();
+            $table->string('aggregate_type', 100);
+            $table->unsignedInteger('version');
+            $table->json('aggregate_data');
+            $table->timestamp('created_at');
+
+            // One snapshot per aggregate version
+            $table->unique(['aggregate_id', 'version']);
+
+            // Cleanup old snapshots
+            $table->index(['aggregate_id', 'created_at']);
+        });
+
+        // Saga persistence table
+        Schema::create('{{ module_lower }}_sagas', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('type', 150)->index();
+            $table->json('data');
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending')->index();
+            $table->timestamp('started_at')->index();
+            $table->timestamp('completed_at')->nullable();
+            $table->text('error_message')->nullable();
+            $table->unsignedInteger('retry_count')->default(0);
+            $table->timestamp('next_retry_at')->nullable()->index();
+            $table->timestamps();
+
+            // Saga processing optimization
+            $table->index(['status', 'next_retry_at']);
+            $table->index(['type', 'status']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('{{ module_lower }}_sagas');
+        Schema::dropIfExists('{{ module_lower }}_snapshots');
+        Schema::dropIfExists('{{ module_lower }}_projections');
+        Schema::dropIfExists('{{ module_lower }}_{{ aggregate_lower }}_read_models');
+        Schema::dropIfExists('{{ module_lower }}_event_streams');
+    }
+};
