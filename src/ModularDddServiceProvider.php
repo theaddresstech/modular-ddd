@@ -434,14 +434,55 @@ class ModularDddServiceProvider extends ServiceProvider
             );
         });
 
-        // Register all generators
-        $this->app->singleton(\LaravelModularDDD\Generators\ModuleGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\AggregateGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\CommandGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\QueryGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\RepositoryGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\ServiceGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Generators\StubProcessor::class);
+        // Register StubProcessor first as it's a dependency for other generators
+        $this->app->singleton(\LaravelModularDDD\Generators\StubProcessor::class, function ($app) {
+            return new \LaravelModularDDD\Generators\StubProcessor(
+                $app->make('files')
+            );
+        });
+
+        // Register all generators with their dependencies
+        $this->app->singleton(\LaravelModularDDD\Generators\ModuleGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\ModuleGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Generators\AggregateGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\AggregateGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Generators\CommandGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\CommandGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Generators\QueryGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\QueryGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Generators\RepositoryGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\RepositoryGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Generators\ServiceGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Generators\ServiceGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
 
         // Register test generators
         $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class);
