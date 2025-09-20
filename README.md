@@ -1,9 +1,9 @@
 # Laravel Modular DDD
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/theaddresstech/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/theaddresstech/modular-ddd)
-[![Total Downloads](https://img.shields.io/packagist/dt/theaddresstech/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/theaddresstech/modular-ddd)
-[![License](https://img.shields.io/packagist/l/theaddresstech/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/theaddresstech/modular-ddd)
-[![PHP Version](https://img.shields.io/packagist/php-v/theaddresstech/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/theaddresstech/modular-ddd)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/mghrby/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/mghrby/modular-ddd)
+[![Total Downloads](https://img.shields.io/packagist/dt/mghrby/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/mghrby/modular-ddd)
+[![License](https://img.shields.io/packagist/l/mghrby/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/mghrby/modular-ddd)
+[![PHP Version](https://img.shields.io/packagist/php-v/mghrby/modular-ddd.svg?style=flat-square)](https://packagist.org/packages/mghrby/modular-ddd)
 
 A production-ready Laravel package for building modular applications using Domain-Driven Design (DDD) with Event Sourcing and CQRS patterns. This package provides a complete infrastructure for implementing DDD in Laravel applications with enterprise-grade features.
 
@@ -63,7 +63,7 @@ A production-ready Laravel package for building modular applications using Domai
 You can install the package via Composer:
 
 ```bash
-composer require theaddresstech/modular-ddd
+composer require mghrby/modular-ddd
 ```
 
 After installation, publish the configuration and migrations:

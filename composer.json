@@ -1,5 +1,5 @@
 {
-    "name": "theaddresstech/modular-ddd",
+    "name": "mghrby/modular-ddd",
     "description": "A Laravel package for building modular applications using Domain-Driven Design with Event Sourcing and CQRS",
     "type": "library",
     "license": "MIT",
