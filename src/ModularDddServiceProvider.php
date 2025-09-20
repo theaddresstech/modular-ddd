@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LaravelModularDDD;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Database\Migrations\Migrator;
 use LaravelModularDDD\EventSourcing\Snapshot\SnapshotStrategyInterface;
 use LaravelModularDDD\EventSourcing\Snapshot\SnapshotStrategyFactory;
 use LaravelModularDDD\EventSourcing\Contracts\EventStoreInterface;
