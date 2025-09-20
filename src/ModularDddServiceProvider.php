@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace LaravelModularDDD;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Database\Migrations\Migrator;
 use LaravelModularDDD\EventSourcing\Snapshot\SnapshotStrategyInterface;
 use LaravelModularDDD\EventSourcing\Snapshot\SnapshotStrategyFactory;
 use LaravelModularDDD\EventSourcing\Contracts\EventStoreInterface;
@@ -111,18 +110,6 @@ class ModularDddServiceProvider extends ServiceProvider
             ], 'migrations');
 
             $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
-
-            // Register Migrator if not already registered
-            if (!$this->app->bound(Migrator::class)) {
-                $this->app->singleton(Migrator::class, function ($app) {
-                    return new Migrator(
-                        $app['migration.repository'],
-                        $app['db'],
-                        $app['files'],
-                        $app['events']
-                    );
-                });
-            }
 
             // Register console commands
             $this->commands([
