@@ -525,21 +525,24 @@ class ModularDddServiceProvider extends ServiceProvider
         $this->app->singleton(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class, function ($app) {
             return new \LaravelModularDDD\Testing\Generators\UnitTestGenerator(
                 $app->make('files'),
-                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
             );
         });
 
         $this->app->singleton(\LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class, function ($app) {
             return new \LaravelModularDDD\Testing\Generators\FeatureTestGenerator(
                 $app->make('files'),
-                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
             );
         });
 
         $this->app->singleton(\LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class, function ($app) {
             return new \LaravelModularDDD\Testing\Generators\IntegrationTestGenerator(
                 $app->make('files'),
-                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
             );
         });
 
