@@ -42,6 +42,33 @@ use LaravelModularDDD\Monitoring\PerformanceMetricsCollector;
 use LaravelModularDDD\EventSourcing\Ordering\EventSequencer;
 use LaravelModularDDD\Modules\Communication\Contracts\ModuleBusInterface;
 use LaravelModularDDD\Modules\Communication\ModuleBus;
+use LaravelModularDDD\Support\CommandBusManager;
+use LaravelModularDDD\Support\QueryBusManager;
+use LaravelModularDDD\Documentation\DocumentationGenerator;
+use LaravelModularDDD\CQRS\ErrorHandling\ErrorHandlerManager;
+use LaravelModularDDD\CQRS\ErrorHandling\LoggingErrorHandler;
+use LaravelModularDDD\CQRS\ErrorHandling\NotificationErrorHandler;
+use LaravelModularDDD\CQRS\ErrorHandling\DeadLetterQueue;
+use LaravelModularDDD\CQRS\ErrorHandling\CircuitBreaker;
+use LaravelModularDDD\CQRS\ErrorHandling\RetryPolicy;
+use LaravelModularDDD\CQRS\Caching\CacheEvictionManager;
+use LaravelModularDDD\CQRS\Caching\CacheInvalidationManager;
+use LaravelModularDDD\CQRS\Saga\SagaManager;
+use LaravelModularDDD\CQRS\Saga\Persistence\DatabaseSagaRepository;
+use LaravelModularDDD\CQRS\Saga\Persistence\SagaRepositoryInterface;
+use LaravelModularDDD\CQRS\ReadModels\ReadModelManager;
+use LaravelModularDDD\CQRS\ReadModels\Persistence\DatabaseReadModelRepository;
+use LaravelModularDDD\CQRS\ReadModels\Persistence\ReadModelRepositoryInterface;
+use LaravelModularDDD\EventSourcing\Archival\EventArchivalManager;
+use LaravelModularDDD\EventSourcing\Versioning\EventVersioningManager;
+use LaravelModularDDD\EventSourcing\Performance\EventDeserializationCache;
+use LaravelModularDDD\EventSourcing\Performance\EventObjectPool;
+use LaravelModularDDD\Core\Application\Repository\BatchAggregateRepository;
+use LaravelModularDDD\CQRS\BatchQueryExecutor;
+use LaravelModularDDD\CQRS\Projections\BatchProjectionLoader;
+use LaravelModularDDD\CQRS\Monitoring\MemoryLeakDetector;
+use LaravelModularDDD\CQRS\Integration\CQRSEventStoreIntegration;
+use LaravelModularDDD\CQRS\Integration\EventProjectionBridge;
 
 class ModularDddServiceProvider extends ServiceProvider
 {
@@ -61,6 +88,14 @@ class ModularDddServiceProvider extends ServiceProvider
         $this->registerSecurity();
         $this->registerModuleCommunication();
         $this->registerGenerators();
+        $this->registerSupport();
+        $this->registerErrorHandling();
+        $this->registerSagas();
+        $this->registerReadModels();
+        $this->registerEventSourcingExtensions();
+        $this->registerBatchProcessing();
+        $this->registerCacheManagement();
+        $this->registerDocumentation();
     }
 
     public function boot(): void
@@ -75,6 +110,18 @@ class ModularDddServiceProvider extends ServiceProvider
             ], 'migrations');
 
             $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+
+            // Register Migrator if not already registered
+            if (!$this->app->bound(Migrator::class)) {
+                $this->app->singleton(Migrator::class, function ($app) {
+                    return new Migrator(
+                        $app['migration.repository'],
+                        $app['db'],
+                        $app['files'],
+                        $app['events']
+                    );
+                });
+            }
 
             // Register console commands
             $this->commands([
@@ -149,13 +196,16 @@ class ModularDddServiceProvider extends ServiceProvider
         });
 
         // Register PRD-compliant Event-Sourced Aggregate Repository
-        $this->app->singleton(\LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository::class, function ($app) {
-            return new \LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository(
-                $app->make(EventStoreInterface::class),
-                $app->make(SnapshotStoreInterface::class),
-                $app->make(SnapshotStrategyInterface::class)
-            );
-        });
+        $this->app->singleton(
+            \LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository::class,
+            function ($app) {
+                return new \LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository(
+                    $app->make(EventStoreInterface::class),
+                    $app->make(SnapshotStoreInterface::class),
+                    $app->make(SnapshotStrategyInterface::class)
+                );
+            }
+        );
 
         // Register Event Store
         $this->app->singleton(EventStoreInterface::class, function ($app) {
@@ -166,7 +216,6 @@ class ModularDddServiceProvider extends ServiceProvider
             if (isset($config['storage_tiers']['hot']['enabled']) &&
                 $config['storage_tiers']['hot']['enabled'] &&
                 isset($config['storage_tiers']['warm'])) {
-
                 return new TieredEventStore(
                     $app->make(RedisEventStore::class),
                     $app->make(MySQLEventStore::class),
@@ -484,34 +533,325 @@ class ModularDddServiceProvider extends ServiceProvider
             );
         });
 
-        // Register test generators
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class);
-        $this->app->singleton(\LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class);
+        // Register test generators with their dependencies
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\TestGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\TestGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FactoryGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\FactoryGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\UnitTestGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\UnitTestGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\FeatureTestGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+
+        $this->app->singleton(\LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class, function ($app) {
+            return new \LaravelModularDDD\Testing\Generators\IntegrationTestGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Generators\StubProcessor::class)
+            );
+        });
+    }
+
+    private function registerSupport(): void
+    {
+        // Register Command Bus Manager
+        $this->app->singleton(CommandBusManager::class, function ($app) {
+            return new CommandBusManager($app);
+        });
+
+        // Register Query Bus Manager
+        $this->app->singleton(QueryBusManager::class, function ($app) {
+            return new QueryBusManager($app);
+        });
+    }
+
+    private function registerErrorHandling(): void
+    {
+        // Register Error Handler Manager
+        $this->app->singleton(ErrorHandlerManager::class, function ($app) {
+            return new ErrorHandlerManager();
+        });
+
+        // Register Logging Error Handler
+        $this->app->singleton(LoggingErrorHandler::class, function ($app) {
+            return new LoggingErrorHandler();
+        });
+
+        // Register Notification Error Handler
+        $this->app->singleton(NotificationErrorHandler::class, function ($app) {
+            return new NotificationErrorHandler();
+        });
+
+        // Register Dead Letter Queue
+        $this->app->singleton(DeadLetterQueue::class, function ($app) {
+            return new DeadLetterQueue(
+                $app->make('db.connection'),
+                'dead_letter_queue'
+            );
+        });
+
+        // Register Circuit Breaker
+        $this->app->singleton(CircuitBreaker::class, function ($app) {
+            $config = config('modular-ddd.cqrs.error_handling.circuit_breaker', []);
+            return new CircuitBreaker(
+                'default',
+                $config['failure_threshold'] ?? 5,
+                $config['recovery_timeout_seconds'] ?? 60,
+                $config['request_volume_threshold'] ?? 10,
+                $config['error_percentage_threshold'] ?? 50.0
+            );
+        });
+
+        // Register Retry Policy
+        $this->app->singleton(RetryPolicy::class, function ($app) {
+            $config = config('modular-ddd.cqrs.error_handling.retry_policy', []);
+            return new RetryPolicy(
+                $config['max_attempts'] ?? 3,
+                $config['delay'] ?? 100,
+                $config['multiplier'] ?? 2
+            );
+        });
+    }
+
+    private function registerSagas(): void
+    {
+        // Register Saga Repository
+        $this->app->singleton(SagaRepositoryInterface::class, function ($app) {
+            return new DatabaseSagaRepository(
+                $app->make('db.connection')
+            );
+        });
+
+        // Register Saga Manager
+        $this->app->singleton(SagaManager::class, function ($app) {
+            return new SagaManager(
+                $app->make(SagaRepositoryInterface::class),
+                $app->make(CommandBusInterface::class),
+                $app->make('events')
+            );
+        });
+    }
+
+    private function registerReadModels(): void
+    {
+        // Register Read Model Repository
+        $this->app->singleton(ReadModelRepositoryInterface::class, function ($app) {
+            return new DatabaseReadModelRepository(
+                $app->make('db.connection')
+            );
+        });
+
+        // Register Read Model Manager
+        $this->app->singleton(ReadModelManager::class, function ($app) {
+            return new ReadModelManager(
+                $app->make(ReadModelRepositoryInterface::class),
+                $app->make(EventStoreInterface::class),
+                $app->make('events')
+            );
+        });
+    }
+
+    private function registerEventSourcingExtensions(): void
+    {
+        // Register Event Archival Manager
+        $this->app->singleton(EventArchivalManager::class, function ($app) {
+            $config = config('modular-ddd.event_sourcing.archival', []);
+            return new EventArchivalManager(
+                $app->make(EventStoreInterface::class),
+                $app->make('filesystem'),
+                $config
+            );
+        });
+
+        // Register Event Versioning Manager
+        $this->app->singleton(EventVersioningManager::class, function ($app) {
+            return new EventVersioningManager();
+        });
+
+        // Register Event Deserialization Cache
+        $this->app->singleton(EventDeserializationCache::class, function ($app) {
+            return new EventDeserializationCache(
+                config('modular-ddd.event_sourcing.cache.max_size', 1000)
+            );
+        });
+
+        // Register Event Object Pool
+        $this->app->singleton(EventObjectPool::class, function ($app) {
+            return new EventObjectPool(
+                config('modular-ddd.event_sourcing.pool.max_size', 100)
+            );
+        });
+
+        // Register Aggregate Reconstructor
+        $this->app->singleton(\LaravelModularDDD\EventSourcing\AggregateReconstructor::class, function ($app) {
+            return new \LaravelModularDDD\EventSourcing\AggregateReconstructor(
+                $app->make(EventStoreInterface::class),
+                $app->make(SnapshotStoreInterface::class)
+            );
+        });
+    }
+
+    private function registerBatchProcessing(): void
+    {
+        // Register Batch Aggregate Repository
+        $this->app->singleton(BatchAggregateRepository::class, function ($app) {
+            return new BatchAggregateRepository(
+                $app->make(EventStoreInterface::class),
+                $app->make(SnapshotStoreInterface::class)
+            );
+        });
+
+        // Register Batch Query Executor
+        $this->app->singleton(BatchQueryExecutor::class, function ($app) {
+            return new BatchQueryExecutor(
+                $app->make(QueryBusInterface::class)
+            );
+        });
+
+        // Register Batch Projection Loader
+        $this->app->singleton(BatchProjectionLoader::class, function ($app) {
+            return new BatchProjectionLoader(
+                $app->make('LaravelModularDDD\EventSourcing\Projections\ProjectionManager'),
+                $app->make(EventStoreInterface::class)
+            );
+        });
+    }
+
+    private function registerCacheManagement(): void
+    {
+        // Register Cache Eviction Manager
+        $this->app->singleton(CacheEvictionManager::class, function ($app) {
+            $config = config('modular-ddd.cqrs.cache.eviction', []);
+            return new CacheEvictionManager(
+                $app->make('cache'),
+                $config['strategy'] ?? 'lru',
+                $config['max_entries'] ?? 10000
+            );
+        });
+
+        // Register Cache Invalidation Manager
+        $this->app->singleton(CacheInvalidationManager::class, function ($app) {
+            return new CacheInvalidationManager(
+                $app->make('cache'),
+                $app->make('events')
+            );
+        });
+
+        // Register Memory Leak Detector
+        $this->app->singleton(MemoryLeakDetector::class, function ($app) {
+            return new MemoryLeakDetector(
+                config('modular-ddd.performance.memory.threshold', 100 * 1024 * 1024),
+                $app->make('log')
+            );
+        });
+    }
+
+    private function registerDocumentation(): void
+    {
+        // Register Documentation Generator
+        $this->app->singleton(DocumentationGenerator::class, function ($app) {
+            return new DocumentationGenerator(
+                $app->make('files'),
+                $app->make(\LaravelModularDDD\Support\ModuleRegistry::class)
+            );
+        });
+
+        // Register Integration classes
+        $this->app->singleton(CQRSEventStoreIntegration::class, function ($app) {
+            return new CQRSEventStoreIntegration(
+                $app->make(CommandBusInterface::class),
+                $app->make(EventStoreInterface::class)
+            );
+        });
+
+        $this->app->singleton(EventProjectionBridge::class, function ($app) {
+            return new EventProjectionBridge(
+                $app->make('LaravelModularDDD\EventSourcing\Projections\ProjectionManager'),
+                $app->make('events')
+            );
+        });
     }
 
     public function provides(): array
     {
-        return [
-            EventStoreInterface::class,
-            EventSequencer::class,
-            SnapshotStoreInterface::class,
-            SnapshotStrategyInterface::class,
-            TransactionManagerInterface::class,
-            CommandBusInterface::class,
-            QueryBusInterface::class,
-            MetricsCollectorInterface::class,
-            PerformanceMetricsCollector::class,
-            PerformanceMonitor::class,
-            MultiTierCacheManager::class,
-            CommandAuthorizationManager::class,
-            AsyncStrategyInterface::class,
-            AsyncStatusRepository::class,
-            ProjectionEventBridge::class,
-            'LaravelModularDDD\\EventSourcing\\Projections\\ProjectionManager',
-            ModuleBusInterface::class,
+            return [
+                EventStoreInterface::class,
+                EventSequencer::class,
+                SnapshotStoreInterface::class,
+                SnapshotStrategyInterface::class,
+                TransactionManagerInterface::class,
+                CommandBusInterface::class,
+                QueryBusInterface::class,
+                MetricsCollectorInterface::class,
+                PerformanceMetricsCollector::class,
+                PerformanceMonitor::class,
+                MultiTierCacheManager::class,
+                CommandAuthorizationManager::class,
+                AsyncStrategyInterface::class,
+                AsyncStatusRepository::class,
+                ProjectionEventBridge::class,
+                'LaravelModularDDD\\EventSourcing\\Projections\\ProjectionManager',
+                ModuleBusInterface::class,
+                CommandBusManager::class,
+                QueryBusManager::class,
+                DocumentationGenerator::class,
+                ErrorHandlerManager::class,
+                LoggingErrorHandler::class,
+                NotificationErrorHandler::class,
+                DeadLetterQueue::class,
+                CircuitBreaker::class,
+                RetryPolicy::class,
+                SagaRepositoryInterface::class,
+                SagaManager::class,
+                ReadModelRepositoryInterface::class,
+                ReadModelManager::class,
+                EventArchivalManager::class,
+                EventVersioningManager::class,
+                EventDeserializationCache::class,
+                EventObjectPool::class,
+                BatchAggregateRepository::class,
+                BatchQueryExecutor::class,
+                BatchProjectionLoader::class,
+                CacheEvictionManager::class,
+                CacheInvalidationManager::class,
+                MemoryLeakDetector::class,
+                CQRSEventStoreIntegration::class,
+                EventProjectionBridge::class,
+                \LaravelModularDDD\Support\ModuleDiscovery::class,
+                \LaravelModularDDD\Support\ModuleRegistry::class,
+                \LaravelModularDDD\Generators\StubProcessor::class,
+                \LaravelModularDDD\Generators\ModuleGenerator::class,
+                \LaravelModularDDD\Generators\AggregateGenerator::class,
+                \LaravelModularDDD\Generators\CommandGenerator::class,
+                \LaravelModularDDD\Generators\QueryGenerator::class,
+                \LaravelModularDDD\Generators\RepositoryGenerator::class,
+                \LaravelModularDDD\Generators\ServiceGenerator::class,
+                \LaravelModularDDD\Testing\Generators\TestGenerator::class,
+                \LaravelModularDDD\Testing\Generators\FactoryGenerator::class,
+                \LaravelModularDDD\Testing\Generators\UnitTestGenerator::class,
+                \LaravelModularDDD\Testing\Generators\FeatureTestGenerator::class,
+                \LaravelModularDDD\Testing\Generators\IntegrationTestGenerator::class,
+                \LaravelModularDDD\EventSourcing\AggregateReconstructor::class,
+                \LaravelModularDDD\Core\Infrastructure\Repository\EventSourcedAggregateRepository::class,
         ];
     }
 }
