@@ -469,7 +469,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Infrastructure\\Projections",
             'class' => "{$aggregateName}Projector",
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $projectorPath = $modulePath . "/Infrastructure/Projections/{$aggregateName}Projector.php";
@@ -529,6 +531,9 @@ final class ModuleGenerator implements GeneratorInterface
                 'namespace' => "Modules\\{$moduleName}\\Presentation\\Http\\Requests",
                 'class' => $requestClassName,
                 'aggregate' => $aggregateName,
+                'aggregate_lower' => Str::lower($aggregateName),
+                'module' => $moduleName,
+                'module_lower' => Str::lower($moduleName),
                 'type' => strtolower($requestType),
             ]);
 
@@ -543,6 +548,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Presentation\\Http\\Resources",
             'class' => $resourceClassName,
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
+            'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $resourcePath = $this->getModulePath($moduleName) . "/Presentation/Http/Resources/{$resourceClassName}.php";
@@ -562,7 +570,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Tests\\Unit\\Domain",
             'class' => "{$aggregateName}Test",
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $unitTestPath = $modulePath . "/Tests/Unit/Domain/{$aggregateName}Test.php";
@@ -576,7 +586,9 @@ final class ModuleGenerator implements GeneratorInterface
                 'namespace' => "Modules\\{$moduleName}\\Tests\\Feature\\Application",
                 'class' => "{$action}{$aggregateName}CommandTest",
                 'aggregate' => $aggregateName,
+                'aggregate_lower' => Str::lower($aggregateName),
                 'module' => $moduleName,
+                'module_lower' => Str::lower($moduleName),
                 'action' => $action,
             ]);
 
@@ -590,7 +602,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Tests\\Integration\\Infrastructure",
             'class' => "{$aggregateName}RepositoryTest",
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $integrationTestPath = $modulePath . "/Tests/Integration/Infrastructure/{$aggregateName}RepositoryTest.php";
@@ -662,7 +676,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Database\\Factories",
             'class' => "{$aggregateName}Factory",
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $factoryPath = $modulePath . "/Database/Factories/{$aggregateName}Factory.php";
@@ -674,7 +690,9 @@ final class ModuleGenerator implements GeneratorInterface
             'namespace' => "Modules\\{$moduleName}\\Database\\Seeders",
             'class' => "{$moduleName}DatabaseSeeder",
             'aggregate' => $aggregateName,
+            'aggregate_lower' => Str::lower($aggregateName),
             'module' => $moduleName,
+            'module_lower' => Str::lower($moduleName),
         ]);
 
         $seederPath = $modulePath . "/Database/Seeders/{$moduleName}DatabaseSeeder.php";

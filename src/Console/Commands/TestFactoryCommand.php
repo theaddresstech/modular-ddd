@@ -212,6 +212,16 @@ final class TestFactoryCommand extends Command
 
         if (empty($availableComponents)) {
             $this->warn("No {$type}s found in module {$module}");
+            $this->info("💡 Tip: You can still generate a base factory template or create components first.");
+
+            // Offer to generate base factory instead
+            if ($this->confirm("Would you like to generate a base factory template instead?", true)) {
+                $this->line("  🏗️ Generating base factory...");
+                $baseFactoryFile = $this->factoryGenerator->generateBaseFactory($module, $this->buildOptions());
+                $this->info("✅ Base factory generated: {$baseFactoryFile}");
+                return Command::SUCCESS;
+            }
+
             return Command::SUCCESS;
         }
 

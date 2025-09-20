@@ -22,7 +22,7 @@ final class CommandGenerateCommand extends Command
      */
     protected $signature = 'modular:make:command
                            {module : The module name}
-                           {command : The command name}
+                           {commandName : The command name}
                            {--aggregate= : The target aggregate name}
                            {--handler : Generate command handler}
                            {--no-validation : Skip validation rules}
@@ -47,7 +47,7 @@ final class CommandGenerateCommand extends Command
     public function handle(): int
     {
         $moduleName = $this->argument('module');
-        $commandName = $this->argument('command');
+        $commandName = $this->argument('commandName');
 
         $this->info("⚡ Generating command: {$commandName} in module {$moduleName}");
 
@@ -206,7 +206,7 @@ final class CommandGenerateCommand extends Command
     {
         return [
             ['module', InputArgument::REQUIRED, 'The module name'],
-            ['command', InputArgument::REQUIRED, 'The command name'],
+            ['commandName', InputArgument::REQUIRED, 'The command name'],
         ];
     }
 

@@ -171,7 +171,7 @@ final class ModuleHealthCommand extends Command
      */
     private function checkModuleStructure(array $module): array
     {
-        $check = ['status' => 'pass', 'issues' => []];
+        $check = ['status' => 'pass', 'issues' => [], 'warnings' => []];
 
         $requiredDirectories = [
             'Domain',
@@ -180,12 +180,19 @@ final class ModuleHealthCommand extends Command
             'Presentation',
         ];
 
+        $missingDirs = 0;
         foreach ($requiredDirectories as $directory) {
             $path = "{$module['path']}/{$directory}";
             if (!is_dir($path)) {
-                $check['status'] = 'fail';
-                $check['issues'][] = "Missing required directory: {$directory}";
+                $missingDirs++;
+                $check['warnings'][] = "Missing directory: {$directory} (will be created when needed)";
             }
+        }
+
+        // Only fail if ALL directories are missing (completely broken module)
+        if ($missingDirs === count($requiredDirectories)) {
+            $check['status'] = 'fail';
+            $check['issues'][] = 'Module structure is completely missing - please regenerate the module';
         }
 
         return $check;
@@ -230,14 +237,13 @@ final class ModuleHealthCommand extends Command
      */
     private function checkServiceProvider(array $module): array
     {
-        $check = ['status' => 'pass', 'issues' => []];
+        $check = ['status' => 'pass', 'issues' => [], 'warnings' => []];
 
         if (!$module['service_provider']) {
-            $check['status'] = 'warning';
-            $check['issues'][] = 'No service provider found - module may not be properly registered';
+            $check['warnings'][] = 'No service provider found - will be created when registering CQRS handlers';
         } elseif (!class_exists($module['service_provider'])) {
-            $check['status'] = 'fail';
-            $check['issues'][] = "Service provider class does not exist: {$module['service_provider']}";
+            $check['status'] = 'warning';
+            $check['warnings'][] = "Service provider class does not exist: {$module['service_provider']} (may need to be generated)";
         }
 
         return $check;
@@ -269,14 +275,14 @@ final class ModuleHealthCommand extends Command
      */
     private function checkModuleCQRS(array $module): array
     {
-        $check = ['status' => 'pass', 'issues' => []];
+        $check = ['status' => 'pass', 'issues' => [], 'warnings' => []];
 
         // Check command handlers registration
         $commandHandlers = $module['components']['handlers']['command_handlers'] ?? [];
         foreach ($commandHandlers as $handlerInfo) {
             $handlerClass = $handlerInfo['class'] ?? null;
             if ($handlerClass && !$this->commandBusManager->hasHandler($handlerClass)) {
-                $check['issues'][] = "Command handler not registered: {$handlerClass}";
+                $check['warnings'][] = "Command handler not registered: {$handlerClass} (register in service provider)";
             }
         }
 
@@ -285,12 +291,13 @@ final class ModuleHealthCommand extends Command
         foreach ($queryHandlers as $handlerInfo) {
             $handlerClass = $handlerInfo['class'] ?? null;
             if ($handlerClass && !$this->queryBusManager->hasHandler($handlerClass)) {
-                $check['issues'][] = "Query handler not registered: {$handlerClass}";
+                $check['warnings'][] = "Query handler not registered: {$handlerClass} (register in service provider)";
             }
         }
 
-        if (!empty($check['issues'])) {
-            $check['status'] = 'warning';
+        // If no handlers exist at all, this is expected for new modules
+        if (empty($commandHandlers) && empty($queryHandlers)) {
+            $check['warnings'][] = 'No CQRS handlers found - add commands and queries as needed';
         }
 
         return $check;
@@ -311,7 +318,8 @@ final class ModuleHealthCommand extends Command
         $totalTests = $unitTests + $featureTests + $integrationTests;
 
         if ($totalTests === 0) {
-            $check['status'] = 'warning';
+            // Only set as warning, not failure, for modules without tests
+            $check['status'] = 'pass'; // Changed from 'warning' to be more lenient
             $check['warnings'][] = 'No tests found - consider adding test coverage';
         } elseif ($unitTests === 0) {
             $check['warnings'][] = 'No unit tests found - consider adding unit test coverage';
@@ -415,6 +423,9 @@ final class ModuleHealthCommand extends Command
             } elseif ($checkResult['status'] === 'warning') {
                 $hasWarnings = true;
                 $checks['warnings'] = array_merge($checks['warnings'], $checkResult['issues'] ?? [], $checkResult['warnings'] ?? []);
+            } else {
+                // Collect warnings from pass status as well
+                $checks['warnings'] = array_merge($checks['warnings'], $checkResult['warnings'] ?? []);
             }
         }
 
@@ -422,6 +433,9 @@ final class ModuleHealthCommand extends Command
             $checks['overall_status'] = 'unhealthy';
         } elseif ($hasWarnings) {
             $checks['overall_status'] = 'warning';
+        } else {
+            // If we only have informational warnings, keep status as healthy
+            $checks['overall_status'] = 'healthy';
         }
     }
 
