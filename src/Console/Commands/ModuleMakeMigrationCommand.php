@@ -25,6 +25,7 @@ final class ModuleMakeMigrationCommand extends Command
     protected $signature = 'modular:make:migration
                            {module : The module name}
                            {name : The name of the migration}
+                           {--aggregate= : The aggregate name (defaults to module name)}
                            {--create= : The table to be created}
                            {--table= : The table to migrate}
                            {--path= : The location where the migration file should be created}
@@ -140,12 +141,15 @@ final class ModuleMakeMigrationCommand extends Command
     {
         $className = $this->generateMigrationClassName($migrationName);
         $tableName = $this->getTableName($migrationName);
+        $aggregateName = $this->option('aggregate') ?: $moduleName;
 
         $variables = [
             'class' => $className,
             'table' => $tableName,
             'module' => $moduleName,
             'module_lower' => strtolower($moduleName),
+            'aggregate' => $aggregateName,
+            'aggregate_lower' => strtolower($aggregateName),
         ];
 
         if ($this->option('create')) {
@@ -216,6 +220,7 @@ final class ModuleMakeMigrationCommand extends Command
     protected function getOptions(): array
     {
         return [
+            ['aggregate', null, InputOption::VALUE_OPTIONAL, 'The aggregate name (defaults to module name)'],
             ['create', null, InputOption::VALUE_OPTIONAL, 'The table to be created'],
             ['table', null, InputOption::VALUE_OPTIONAL, 'The table to migrate'],
             ['path', null, InputOption::VALUE_OPTIONAL, 'The location where the migration file should be created'],

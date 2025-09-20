@@ -1,0 +1,195 @@
+# {{ module }} Module - Test Documentation
+
+## Overview
+This document provides comprehensive testing information for the {{ module }} module, including test coverage, test commands, and testing strategies.
+
+## Module Information
+- **Module Name**: {{ module }}
+- **Module Path**: `modules/{{ module }}`
+- **Test Namespace**: `Modules\{{ module }}\Tests`
+
+## Test Structure
+
+### Unit Tests
+Unit tests focus on individual components in isolation:
+- **Domain Entities**: Test aggregate behavior, business rules, and domain logic
+- **Value Objects**: Test immutability, validation, and equality
+- **Domain Services**: Test business logic and domain operations
+
+### Feature Tests
+Feature tests verify complete workflows:
+- **Command Handling**: Test command execution from input to persistence
+- **Query Handling**: Test data retrieval and transformation
+- **API Endpoints**: Test HTTP request/response cycles
+
+### Integration Tests
+Integration tests verify component interaction:
+- **Repository Integration**: Test data persistence and retrieval
+- **Event Handling**: Test domain event publishing and handling
+- **External Service Integration**: Test third-party service interactions
+
+## Test Commands
+
+### Running All Module Tests
+```bash
+{{ test_commands.all }}
+```
+
+### Running Specific Test Types
+```bash
+# Unit tests only
+{{ test_commands.unit }}
+
+# Feature tests only
+{{ test_commands.feature }}
+
+# Integration tests only
+{{ test_commands.integration }}
+
+# Performance tests only
+{{ test_commands.performance }}
+```
+
+### Running Individual Test Files
+```bash
+# Test specific aggregate
+php artisan test modules/{{ module }}/Tests/Unit/Domain/Aggregates/{{ module }}Test.php
+
+# Test specific command handler
+php artisan test modules/{{ module }}/Tests/Feature/Application/Commands/
+
+# Test specific API endpoint
+php artisan test modules/{{ module }}/Tests/Feature/Presentation/Http/Controllers/
+```
+
+## Test Coverage
+
+### Files Created
+{% for file in files_created %}
+- `{{ file }}`
+{% endfor %}
+
+### Coverage Statistics
+{% if statistics %}
+- **Total Tests**: {{ statistics.total_tests | default(0) }}
+- **Passing Tests**: {{ statistics.passing_tests | default(0) }}
+- **Failing Tests**: {{ statistics.failing_tests | default(0) }}
+- **Coverage Percentage**: {{ statistics.coverage_percentage | default('N/A') }}%
+{% else %}
+Coverage statistics will be available after running tests.
+{% endif %}
+
+## Testing Best Practices
+
+### 1. Test Naming Conventions
+- Use descriptive test method names that explain the scenario
+- Follow the pattern: `test_should_do_something_when_condition()`
+- Use snake_case for test method names
+
+### 2. Test Organization
+- Group related tests in the same test class
+- Use `setUp()` and `tearDown()` methods for common test setup
+- Keep tests focused on a single behavior or scenario
+
+### 3. Data Management
+- Use factories for creating test data
+- Use database transactions or RefreshDatabase trait
+- Clean up test data to avoid test pollution
+
+### 4. Assertion Guidelines
+- Use specific assertions that clearly express intent
+- Include meaningful assertion messages
+- Test both positive and negative scenarios
+
+## Test Factories
+
+### {{ module }} Factory
+The module includes factory classes for generating test data:
+- `{{ module }}Factory`: Creates {{ module }} aggregate instances
+- Custom factory states for edge cases and specific scenarios
+
+### Usage Examples
+```php
+// Create a basic {{ module }} instance
+${{ module | lower }} = {{ module }}Factory::new()->create();
+
+// Create with specific attributes
+${{ module | lower }} = {{ module }}Factory::new()->create([
+    'name' => 'Specific Test Name',
+    'status' => 'active'
+]);
+
+// Create multiple instances
+${{ module | lower }}s = {{ module }}Factory::new()->count(5)->create();
+
+// Create with relationships
+${{ module | lower }} = {{ module }}Factory::new()
+    ->withRelatedEntities()
+    ->create();
+```
+
+## Mock and Stub Guidelines
+
+### Repository Mocking
+```php
+$mockRepository = $this->createMock({{ module }}RepositoryInterface::class);
+$mockRepository->method('findById')
+    ->willReturn($expectedAggregate);
+```
+
+### Event Mocking
+```php
+// Test that events are dispatched
+$this->expectsEvents([{{ module }}Created::class]);
+
+// Test event content
+Event::fake();
+// ... perform action
+Event::assertDispatched({{ module }}Created::class, function ($event) {
+    return $event->aggregateId === $expectedId;
+});
+```
+
+## Continuous Integration
+
+### GitHub Actions
+Tests are automatically run on:
+- Pull requests to main branch
+- Pushes to main branch
+- Scheduled nightly runs
+
+### Quality Gates
+- All tests must pass
+- Code coverage must be above 80%
+- No phpstan errors allowed
+- PSR-12 coding standards must be followed
+
+## Troubleshooting
+
+### Common Issues
+1. **Database Connection Errors**: Ensure test database is properly configured
+2. **Memory Limit Exceeded**: Increase PHP memory limit or optimize test data
+3. **Timeout Issues**: Break large tests into smaller, focused tests
+
+### Debug Commands
+```bash
+# Run tests with verbose output
+php artisan test --verbose
+
+# Run specific test with debug output
+php artisan test --filter=test_method_name --verbose
+
+# Generate coverage report
+php artisan test --coverage
+```
+
+## Contributing
+
+When adding new features to the {{ module }} module:
+1. Write tests first (TDD approach)
+2. Ensure all existing tests continue to pass
+3. Add appropriate test documentation
+4. Maintain test coverage above 80%
+
+---
+*Generated by Laravel Modular DDD Package - Test Documentation Generator*

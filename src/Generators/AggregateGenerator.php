@@ -68,6 +68,16 @@ final class AggregateGenerator implements GeneratorInterface
         ];
     }
 
+    public function getFilesToGenerate(string $moduleName, string $aggregateName, array $options = []): array
+    {
+        $modulePath = $this->getModulePath($moduleName);
+
+        return [
+            $modulePath . "/Domain/Models/{$aggregateName}.php",
+            $modulePath . "/Domain/Exceptions/{$aggregateName}Exception.php",
+        ];
+    }
+
     private function generateAggregateRoot(string $moduleName, string $aggregateName, array $options): string
     {
         $namespace = "Modules\\{$moduleName}\\Domain\\Models";

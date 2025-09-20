@@ -68,6 +68,17 @@ final class QueryGenerator implements GeneratorInterface
         ];
     }
 
+    public function getFilesToGenerate(string $moduleName, string $queryName, array $options = []): array
+    {
+        $modulePath = $this->getModulePath($moduleName);
+        $queryPath = $modulePath . "/Application/Queries/{$queryName}";
+
+        return [
+            $queryPath . "/{$queryName}Query.php",
+            $queryPath . "/{$queryName}Handler.php",
+        ];
+    }
+
     private function generateQuery(string $moduleName, string $queryName, array $options): string
     {
         $namespace = "Modules\\{$moduleName}\\Application\\Queries\\{$queryName}";

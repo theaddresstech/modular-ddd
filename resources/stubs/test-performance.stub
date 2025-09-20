@@ -1,0 +1,167 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Performance;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use {{ moduleNamespace }}\Domain\Aggregates\{{ module }};
+use {{ moduleNamespace }}\Domain\Repositories\{{ module }}RepositoryInterface;
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ module }}Id;
+use Ramsey\Uuid\Uuid;
+
+/**
+ * {{ module }}PerformanceTest
+ *
+ * Performance tests for {{ module }} module.
+ * Tests memory usage, execution time, and resource consumption.
+ */
+final class {{ module }}PerformanceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private {{ module }}RepositoryInterface $repository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository = $this->app->make({{ module }}RepositoryInterface::class);
+    }
+
+    public function test_aggregate_creation_performance(): void
+    {
+        $startTime = microtime(true);
+        $startMemory = memory_get_usage();
+
+        // Create multiple aggregates to test performance
+        $aggregates = [];
+        for ($i = 0; $i < 100; $i++) {
+            $aggregateId = {{ module }}Id::fromString(Uuid::uuid4()->toString());
+            $aggregate = {{ module }}::create(
+                $aggregateId,
+                "Performance Test Entity {$i}",
+                "Performance testing description {$i}"
+            );
+            $aggregates[] = $aggregate;
+        }
+
+        $endTime = microtime(true);
+        $endMemory = memory_get_usage();
+
+        $executionTime = $endTime - $startTime;
+        $memoryUsage = $endMemory - $startMemory;
+
+        // Assert performance constraints
+        $this->assertLessThan(2.0, $executionTime, 'Aggregate creation should complete within 2 seconds');
+        $this->assertLessThan(50 * 1024 * 1024, $memoryUsage, 'Memory usage should not exceed 50MB');
+    }
+
+    public function test_repository_save_performance(): void
+    {
+        $startTime = microtime(true);
+
+        // Test saving multiple aggregates
+        for ($i = 0; $i < 50; $i++) {
+            $aggregateId = {{ module }}Id::fromString(Uuid::uuid4()->toString());
+            $aggregate = {{ module }}::create(
+                $aggregateId,
+                "Repository Performance Test {$i}",
+                "Performance testing for repository operations"
+            );
+
+            $this->repository->save($aggregate);
+        }
+
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+
+        // Assert repository performance
+        $this->assertLessThan(5.0, $executionTime, 'Repository operations should complete within 5 seconds');
+    }
+
+    public function test_aggregate_retrieval_performance(): void
+    {
+        // Setup: Create test aggregates
+        $aggregateIds = [];
+        for ($i = 0; $i < 20; $i++) {
+            $aggregateId = {{ module }}Id::fromString(Uuid::uuid4()->toString());
+            $aggregate = {{ module }}::create(
+                $aggregateId,
+                "Retrieval Test {$i}",
+                "Performance testing for aggregate retrieval"
+            );
+            $this->repository->save($aggregate);
+            $aggregateIds[] = $aggregateId;
+        }
+
+        $startTime = microtime(true);
+
+        // Test retrieval performance
+        foreach ($aggregateIds as $aggregateId) {
+            $retrievedAggregate = $this->repository->findById($aggregateId);
+            $this->assertNotNull($retrievedAggregate);
+        }
+
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+
+        // Assert retrieval performance
+        $this->assertLessThan(1.0, $executionTime, 'Aggregate retrieval should complete within 1 second');
+    }
+
+    public function test_memory_leak_prevention(): void
+    {
+        $initialMemory = memory_get_usage();
+
+        // Perform operations that might cause memory leaks
+        for ($i = 0; $i < 100; $i++) {
+            $aggregateId = {{ module }}Id::fromString(Uuid::uuid4()->toString());
+            $aggregate = {{ module }}::create(
+                $aggregateId,
+                "Memory Leak Test {$i}",
+                "Testing for memory leaks in aggregate operations"
+            );
+
+            // Simulate various operations
+            $aggregate->updateDetails("Updated description {$i}");
+            unset($aggregate);
+        }
+
+        // Force garbage collection
+        gc_collect_cycles();
+
+        $finalMemory = memory_get_usage();
+        $memoryIncrease = $finalMemory - $initialMemory;
+
+        // Assert no significant memory leaks
+        $this->assertLessThan(10 * 1024 * 1024, $memoryIncrease, 'Memory increase should not exceed 10MB');
+    }
+
+    public function test_concurrent_operations_simulation(): void
+    {
+        $startTime = microtime(true);
+
+        // Simulate concurrent operations
+        $results = [];
+        for ($i = 0; $i < 10; $i++) {
+            $aggregateId = {{ module }}Id::fromString(Uuid::uuid4()->toString());
+            $aggregate = {{ module }}::create(
+                $aggregateId,
+                "Concurrent Test {$i}",
+                "Testing concurrent operations"
+            );
+
+            $this->repository->save($aggregate);
+            $retrievedAggregate = $this->repository->findById($aggregateId);
+            $results[] = $retrievedAggregate;
+        }
+
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+
+        // Assert concurrent operation performance
+        $this->assertLessThan(3.0, $executionTime, 'Concurrent operations should complete within 3 seconds');
+        $this->assertCount(10, $results, 'All operations should complete successfully');
+    }
+}

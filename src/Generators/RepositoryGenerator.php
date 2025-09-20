@@ -67,6 +67,16 @@ final class RepositoryGenerator implements GeneratorInterface
         ];
     }
 
+    public function getFilesToGenerate(string $moduleName, string $aggregateName, array $options = []): array
+    {
+        $modulePath = $this->getModulePath($moduleName);
+
+        return [
+            $modulePath . "/Domain/Repositories/{$aggregateName}RepositoryInterface.php",
+            $modulePath . "/Infrastructure/Persistence/EventStore/EventSourced{$aggregateName}Repository.php",
+        ];
+    }
+
     private function generateRepositoryInterface(string $moduleName, string $aggregateName, array $options): string
     {
         $namespace = "Modules\\{$moduleName}\\Domain\\Repositories";

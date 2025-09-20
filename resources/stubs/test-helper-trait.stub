@@ -1,0 +1,246 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ testNamespace }}\Helpers;
+
+use {{ moduleNamespace }}\Domain\Aggregates\{{ module }};
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ module }}Id;
+use {{ moduleNamespace }}\Domain\Repositories\{{ module }}RepositoryInterface;
+use Ramsey\Uuid\Uuid;
+
+/**
+ * Tests{{ module }}
+ *
+ * Test helper trait for {{ module }} module testing.
+ * Provides common test utilities, factory methods, and assertions.
+ */
+trait Tests{{ module }}
+{
+    /**
+     * Create a test {{ module }} instance with default values.
+     */
+    protected function create{{ module }}(array $overrides = []): {{ module }}
+    {
+        $defaults = [
+            'id' => {{ module }}Id::fromString(Uuid::uuid4()->toString()),
+            'name' => 'Test {{ module }} ' . uniqid(),
+            'description' => 'A test {{ module }} created for testing purposes',
+        ];
+
+        $attributes = array_merge($defaults, $overrides);
+
+        return {{ module }}::create(
+            $attributes['id'],
+            $attributes['name'],
+            $attributes['description']
+        );
+    }
+
+    /**
+     * Create and persist a {{ module }} aggregate in the repository.
+     */
+    protected function createAndSave{{ module }}(array $overrides = []): {{ module }}
+    {
+        $aggregate = $this->create{{ module }}($overrides);
+
+        $repository = $this->app->make({{ module }}RepositoryInterface::class);
+        $repository->save($aggregate);
+
+        return $aggregate;
+    }
+
+    /**
+     * Create multiple {{ module }} instances.
+     */
+    protected function create{{ module }}Collection(int $count, array $overrides = []): array
+    {
+        $aggregates = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $instanceOverrides = array_merge($overrides, [
+                'name' => 'Test {{ module }} ' . ($i + 1) . ' ' . uniqid(),
+            ]);
+            $aggregates[] = $this->create{{ module }}($instanceOverrides);
+        }
+
+        return $aggregates;
+    }
+
+    /**
+     * Create a {{ module }} with invalid data for testing validation.
+     */
+    protected function createInvalid{{ module }}(): array
+    {
+        return [
+            'id' => 'invalid-id',
+            'name' => '', // Invalid: empty name
+            'description' => str_repeat('x', 2000), // Invalid: too long
+        ];
+    }
+
+    /**
+     * Create a {{ module }} with edge case data.
+     */
+    protected function createEdgeCase{{ module }}(): {{ module }}
+    {
+        return $this->create{{ module }}([
+            'name' => str_repeat('a', 255), // Maximum length
+            'description' => str_repeat('b', 1000), // Maximum length
+        ]);
+    }
+
+    /**
+     * Assert that two {{ module }} aggregates are equal.
+     */
+    protected function assert{{ module }}Equals({{ module }} $expected, {{ module }} $actual): void
+    {
+        $this->assertTrue($expected->getId()->equals($actual->getId()));
+        $this->assertEquals($expected->getName(), $actual->getName());
+        $this->assertEquals($expected->getDescription(), $actual->getDescription());
+        $this->assertEquals($expected->getStatus(), $actual->getStatus());
+    }
+
+    /**
+     * Assert that a {{ module }} has the expected basic structure.
+     */
+    protected function assert{{ module }}Structure({{ module }} $aggregate): void
+    {
+        $this->assertInstanceOf({{ module }}::class, $aggregate);
+        $this->assertInstanceOf({{ module }}Id::class, $aggregate->getId());
+        $this->assertIsString($aggregate->getName());
+        $this->assertIsString($aggregate->getDescription());
+        $this->assertNotEmpty($aggregate->getName());
+    }
+
+    /**
+     * Assert that a {{ module }} is in the expected state.
+     */
+    protected function assert{{ module }}State({{ module }} $aggregate, string $expectedStatus): void
+    {
+        $this->assertEquals($expectedStatus, $aggregate->getStatus());
+    }
+
+    /**
+     * Get a valid {{ module }}Id for testing.
+     */
+    protected function getValid{{ module }}Id(): {{ module }}Id
+    {
+        return {{ module }}Id::fromString(Uuid::uuid4()->toString());
+    }
+
+    /**
+     * Get test data for {{ module }} creation.
+     */
+    protected function get{{ module }}TestData(): array
+    {
+        return [
+            'name' => 'Test {{ module }} Name',
+            'description' => 'Test {{ module }} description for testing purposes',
+            'status' => 'active',
+        ];
+    }
+
+    /**
+     * Get test data with all possible fields for {{ module }}.
+     */
+    protected function getComplete{{ module }}TestData(): array
+    {
+        return array_merge($this->get{{ module }}TestData(), [
+            'metadata' => ['test' => true],
+            'created_at' => now()->toISOString(),
+            'updated_at' => now()->toISOString(),
+        ]);
+    }
+
+    /**
+     * Mock the {{ module }} repository for testing.
+     */
+    protected function mock{{ module }}Repository(): \PHPUnit\Framework\MockObject\MockObject
+    {
+        $mock = $this->createMock({{ module }}RepositoryInterface::class);
+        $this->app->instance({{ module }}RepositoryInterface::class, $mock);
+        return $mock;
+    }
+
+    /**
+     * Setup a mock repository with standard expectations.
+     */
+    protected function setupMock{{ module }}Repository({{ module }} $aggregate = null): \PHPUnit\Framework\MockObject\MockObject
+    {
+        $mock = $this->mock{{ module }}Repository();
+
+        if ($aggregate) {
+            $mock->method('findById')
+                ->with($aggregate->getId())
+                ->willReturn($aggregate);
+
+            $mock->method('save')
+                ->with($aggregate)
+                ->willReturn(true);
+        }
+
+        return $mock;
+    }
+
+    /**
+     * Assert that repository save was called with specific aggregate.
+     */
+    protected function assertRepositorySaveCalledWith(\PHPUnit\Framework\MockObject\MockObject $mock, {{ module }} $aggregate): void
+    {
+        $mock->expects($this->once())
+            ->method('save')
+            ->with($this->equalTo($aggregate));
+    }
+
+    /**
+     * Assert that repository findById was called with specific ID.
+     */
+    protected function assertRepositoryFindByIdCalledWith(\PHPUnit\Framework\MockObject\MockObject $mock, {{ module }}Id $id): void
+    {
+        $mock->expects($this->once())
+            ->method('findById')
+            ->with($this->equalTo($id));
+    }
+
+    /**
+     * Create test scenario data for common testing patterns.
+     */
+    protected function get{{ module }}TestScenarios(): array
+    {
+        return [
+            'valid_creation' => [
+                'data' => $this->get{{ module }}TestData(),
+                'should_succeed' => true,
+            ],
+            'empty_name' => [
+                'data' => array_merge($this->get{{ module }}TestData(), ['name' => '']),
+                'should_succeed' => false,
+            ],
+            'too_long_name' => [
+                'data' => array_merge($this->get{{ module }}TestData(), ['name' => str_repeat('x', 256)]),
+                'should_succeed' => false,
+            ],
+            'too_long_description' => [
+                'data' => array_merge($this->get{{ module }}TestData(), ['description' => str_repeat('x', 1001)]),
+                'should_succeed' => false,
+            ],
+            'edge_case_valid' => [
+                'data' => [
+                    'name' => str_repeat('a', 255),
+                    'description' => str_repeat('b', 1000),
+                ],
+                'should_succeed' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Cleanup test data and reset mocks.
+     */
+    protected function cleanup{{ module }}Tests(): void
+    {
+        // This method can be called in tearDown() to clean up after tests
+        $this->app->forgetInstance({{ module }}RepositoryInterface::class);
+    }
+}

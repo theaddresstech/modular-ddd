@@ -68,6 +68,17 @@ final class CommandGenerator implements GeneratorInterface
         ];
     }
 
+    public function getFilesToGenerate(string $moduleName, string $commandName, array $options = []): array
+    {
+        $modulePath = $this->getModulePath($moduleName);
+        $commandPath = $modulePath . "/Application/Commands/{$commandName}";
+
+        return [
+            $commandPath . "/{$commandName}Command.php",
+            $commandPath . "/{$commandName}Handler.php",
+        ];
+    }
+
     private function generateCommand(string $moduleName, string $commandName, array $options): string
     {
         $namespace = "Modules\\{$moduleName}\\Application\\Commands\\{$commandName}";

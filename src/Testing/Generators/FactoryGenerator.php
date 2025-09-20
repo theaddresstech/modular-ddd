@@ -165,6 +165,8 @@ final class FactoryGenerator
         }
 
         $variables = [
+            'namespace' => $this->getFactoryNamespace($module),
+            'class' => 'BaseFactory',
             'module' => $module,
             'moduleNamespace' => $this->getModuleNamespace($module),
             'factoryNamespace' => $this->getFactoryNamespace($module),

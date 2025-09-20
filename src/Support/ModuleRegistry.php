@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LaravelModularDDD\Support;
 
 use Illuminate\Cache\Repository as CacheRepository;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 
 /**
@@ -20,7 +21,8 @@ final class ModuleRegistry
 
     public function __construct(
         private readonly ModuleDiscovery $discovery,
-        private readonly CacheRepository $cache
+        private readonly CacheRepository $cache,
+        private readonly Filesystem $filesystem
     ) {}
 
     /**
@@ -306,8 +308,11 @@ final class ModuleRegistry
             return false;
         }
 
-        // Update configuration
+        // Update runtime configuration
         config(["modular-monolith.modules.{$name}.enabled" => true]);
+
+        // Persist to module config file
+        $this->updateModuleConfig($name, ['enabled' => true]);
 
         $this->clearCache();
         return true;
@@ -322,11 +327,99 @@ final class ModuleRegistry
             return false;
         }
 
-        // Update configuration
+        // Update runtime configuration
         config(["modular-monolith.modules.{$name}.enabled" => false]);
+
+        // Persist to module config file
+        $this->updateModuleConfig($name, ['enabled' => false]);
 
         $this->clearCache();
         return true;
+    }
+
+    /**
+     * Update module configuration file with new settings.
+     */
+    private function updateModuleConfig(string $moduleName, array $updates): bool
+    {
+        $module = $this->getModule($moduleName);
+        if (!$module) {
+            return false;
+        }
+
+        $modulePath = $module['path'];
+        $configPaths = [
+            "{$modulePath}/Config/config.php",
+            "{$modulePath}/config.php",
+        ];
+
+        // Find existing config file or create new one
+        $configFile = null;
+        foreach ($configPaths as $path) {
+            if ($this->filesystem->exists($path)) {
+                $configFile = $path;
+                break;
+            }
+        }
+
+        // If no config file exists, create one in Config/config.php
+        if (!$configFile) {
+            $configFile = "{$modulePath}/Config/config.php";
+            $this->filesystem->ensureDirectoryExists(dirname($configFile));
+        }
+
+        // Load existing config or create new array
+        $config = [];
+        if ($this->filesystem->exists($configFile)) {
+            $config = include $configFile;
+            if (!is_array($config)) {
+                $config = [];
+            }
+        }
+
+        // Merge updates
+        $config = array_merge($config, $updates);
+
+        // Generate PHP config file content
+        $content = "<?php\n\n";
+        $content .= "return " . $this->arrayToPhpCode($config) . ";\n";
+
+        // Write to file
+        return $this->filesystem->put($configFile, $content) !== false;
+    }
+
+    /**
+     * Convert array to PHP code representation.
+     */
+    private function arrayToPhpCode(array $array, int $indent = 0): string
+    {
+        $indentStr = str_repeat('    ', $indent);
+        $code = "[\n";
+
+        foreach ($array as $key => $value) {
+            $code .= $indentStr . '    ';
+
+            if (is_string($key)) {
+                $code .= "'" . addslashes($key) . "' => ";
+            }
+
+            if (is_array($value)) {
+                $code .= $this->arrayToPhpCode($value, $indent + 1);
+            } elseif (is_bool($value)) {
+                $code .= $value ? 'true' : 'false';
+            } elseif (is_null($value)) {
+                $code .= 'null';
+            } elseif (is_string($value)) {
+                $code .= "'" . addslashes($value) . "'";
+            } else {
+                $code .= $value;
+            }
+
+            $code .= ",\n";
+        }
+
+        $code .= $indentStr . ']';
+        return $code;
     }
 
     /**
